@@ -26,7 +26,7 @@ class Jogador(Base):
     vitorias = Column(Integer, default=0)
     derrotas = Column(Integer, default=0)
     
-    soco = Column(Integer, default=0)
+    soco = Column(Integer, default=1)
     espada = Column(Integer, default=0)
     arma = Column(Integer, default=0)
     fruta = Column(Integer, default=0)

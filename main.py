@@ -18,9 +18,11 @@ async def load_cogs():
     try:
         await bot.load_extension('cogs.registro')
         await bot.load_extension('cogs.perfil')
+        await bot.load_extension('cogs.tutorial_combate')
         
         print(' Cog registrar carregado!')
-        print(' Cog perfil carregado!')  
+        print(' Cog perfil carregado!') 
+        print(' Cog tutorial carregado!')  
         
     except Exception as e:
         print(f' Erro ao carregar: {e}')

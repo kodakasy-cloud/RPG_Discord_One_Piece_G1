@@ -43,8 +43,9 @@ class FaccaoSelectView(discord.ui.View):
         self.add_item(FaccaoSelect(user_id))
 
 
+
 async def mostrar_detalhes_faccao(interaction: discord.Interaction, faccao: str):
-    # Import DENTRO da função para evitar circular import
+
     from views.confirmacao_view import ConfirmacaoView
     
     info = FACCAO_INFO[faccao]
@@ -69,7 +70,10 @@ async def mostrar_detalhes_faccao(interaction: discord.Interaction, faccao: str)
     
     embed.set_footer(text="Esta será sua jornada. Deseja prosseguir?")
     
-    view = ConfirmacaoView(interaction.user.id, faccao)
+    from cogs.registro import RegistroCog
+    bot = interaction.client  
+    view = ConfirmacaoView(interaction.user.id, faccao, bot)  
+    
     await interaction.response.edit_message(embed=embed, view=view)
 
 

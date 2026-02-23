@@ -2,13 +2,14 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database.connection import SessionLocal, Base
+from database.connection import SessionLocal
 from models.usuario import Usuario
 from models.jogador import Jogador
 from data.faccao_config import FACCAO_INFO
 from utils.faccao_utils import get_stats_faccao
 from ui.cores import Cores
 from datetime import datetime
+from views.perfil_menu_view import PerfilMenuView
 
 class PerfilCog(commands.Cog):
     def __init__(self, bot):
@@ -16,7 +17,7 @@ class PerfilCog(commands.Cog):
     
     @commands.command(name="perfil", aliases=["profile", "status", "stats"])
     async def perfil(self, ctx, membro: discord.Member = None):
-        """Veja o perfil de um jogador"""
+        """Veja o perfil de um jogador com menu interativo"""
         
         # Se não mencionar ninguém, mostra o próprio perfil
         if membro is None:
@@ -44,11 +45,10 @@ class PerfilCog(commands.Cog):
             
             # Pega informações da facção
             info_faccao = FACCAO_INFO.get(jogador.faccao, {})
-            stats = get_stats_faccao(jogador.faccao)
             
             # Cria o embed do perfil
             embed = discord.Embed(
-                title=f"⚔️ PERFIL DE {membro.name.upper()} ⚔️",
+                title=f"⚔️ **PERFIL DE {membro.name.upper()}** ⚔️",
                 color=info_faccao.get('cor', Cores.AZUL_FORTE)
             )
             
@@ -63,7 +63,7 @@ class PerfilCog(commands.Cog):
                 f"**Berries:** 💰 {jogador.berries}\n"
                 f"**Registro:** {usuario.data_registro.strftime('%d/%m/%Y')}"
             )
-            embed.add_field(name="📋 INFORMAÇÕES", value=info_basica, inline=False)
+            embed.add_field(name="📋 **INFORMAÇÕES**", value=info_basica, inline=False)
             
             # Status de combate
             status_combate = (
@@ -73,7 +73,7 @@ class PerfilCog(commands.Cog):
                 f"⚔️ **Vitórias:** {jogador.vitorias}\n"
                 f"💔 **Derrotas:** {jogador.derrotas}"
             )
-            embed.add_field(name="⚔️ COMBATE", value=status_combate, inline=True)
+            embed.add_field(name="⚔️ **COMBATE**", value=status_combate, inline=True)
             
             # Estilos de luta
             estilos = (
@@ -82,7 +82,7 @@ class PerfilCog(commands.Cog):
                 f"🔫 **Arma:** {jogador.arma}\n"
                 f"🍎 **Fruta:** {jogador.fruta}"
             )
-            embed.add_field(name="🥋 HABILIDADES", value=estilos, inline=True)
+            embed.add_field(name="🥋 **HABILIDADES**", value=estilos, inline=True)
             
             # Hakis
             hakis = (
@@ -90,25 +90,28 @@ class PerfilCog(commands.Cog):
                 f"👁️ **Observação:** {jogador.haki_observacao}\n"
                 f"👑 **Rei:** {jogador.haki_rei}"
             )
-            embed.add_field(name="🌀 HAKIS", value=hakis, inline=True)
+            embed.add_field(name="🌀 **HAKIS**", value=hakis, inline=True)
             
             # Barra de XP
-            xp_proximo = jogador.nivel * 100  # Fórmula simples: 100 XP por nível
+            xp_proximo = jogador.nivel * 100
             xp_atual = jogador.xp
             percentual = min(100, int((xp_atual / xp_proximo) * 100))
             
             barra = "🟩" * (percentual // 10) + "⬜" * (10 - (percentual // 10))
             
             embed.add_field(
-                name="📊 PROGRESSÃO",
+                name="📊 **PROGRESSÃO**",
                 value=f"**Nível {jogador.nivel}**\n{barra} {percentual}%\n`{xp_atual}/{xp_proximo} XP`",
                 inline=False
             )
             
-            # Footer com ID do jogador
-            embed.set_footer(text=f"ID: {jogador.id} • Membro desde {usuario.data_registro.strftime('%d/%m/%Y')}")
+            # Footer
+            embed.set_footer(text=f"ID: {jogador.id} • Use o menu abaixo para navegar")
             
-            await ctx.send(embed=embed)
+            # ===== MENU INTERATIVO =====
+            view = PerfilMenuView(ctx.author.id, jogador, self.bot)
+            
+            await ctx.send(embed=embed, view=view)
             
         except Exception as e:
             await ctx.send(f"❌ Erro ao carregar perfil: ```{str(e)}```")
@@ -132,7 +135,7 @@ class PerfilCog(commands.Cog):
                 return
             
             embed = discord.Embed(
-                title="🏆 RANKING GRAND LINE 🏆",
+                title="🏆 **RANKING GRAND LINE** 🏆",
                 description="Os guerreiros mais poderosos dos mares:",
                 color=Cores.DOURADO
             )
@@ -151,7 +154,7 @@ class PerfilCog(commands.Cog):
                         f"┗ Nv.{jogador.nivel} | ⚔️ {jogador.vitorias} vitórias | 💰 {jogador.berries} berries\n"
                     )
             
-            embed.add_field(name="⚔️ TOP 10 PIRATAS", value=ranking_text, inline=False)
+            embed.add_field(name="⚔️ **TOP 10 PIRATAS**", value=ranking_text, inline=False)
             embed.set_footer(text="Use !perfil @usuário para ver detalhes")
             
             await ctx.send(embed=embed)
