@@ -17,9 +17,13 @@ async def on_ready():
 async def load_cogs():
     try:
         await bot.load_extension('cogs.registro')
-        print(' Cog registro carregado!')
+        await bot.load_extension('cogs.perfil')
+        
+        print(' Cog registrar carregado!')
+        print(' Cog perfil carregado!')  
+        
     except Exception as e:
-        print(f' Erro: {e}')
+        print(f' Erro ao carregar: {e}')
 
 if __name__ == "__main__":
     asyncio.run(load_cogs())
