@@ -1,4 +1,3 @@
-# cogs/perfil.py
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -55,12 +54,18 @@ class PerfilCog(commands.Cog):
             # Thumbnail com avatar do usuário
             embed.set_thumbnail(url=membro.display_avatar.url)
             
+            # Raça e Sobrenome (com tratamento de erro caso não existam no modelo)
+            raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
+            sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
+            
             # Informações básicas
             info_basica = (
                 f"**Facção:** {info_faccao.get('emoji', '')} {info_faccao.get('nome', 'Desconhecida')}\n"
                 f"**Nível:** {jogador.nivel}\n"
                 f"**XP:** {jogador.xp}\n"
                 f"**Berries:** 💰 {jogador.berries}\n"
+                f"**Raça:** {raca_text}\n"
+                f"**Sobrenome:** {sobrenome_text}\n"
                 f"**Registro:** {usuario.data_registro.strftime('%d/%m/%Y')}"
             )
             embed.add_field(name="📋 **INFORMAÇÕES**", value=info_basica, inline=False)
@@ -110,8 +115,7 @@ class PerfilCog(commands.Cog):
             
             # ===== MENU INTERATIVO =====
             view = PerfilMenuView(ctx.author.id, jogador, self.bot)
-            
-            await ctx.send(embed=embed, view=view)
+            view.mensagem_original = await ctx.send(embed=embed, view=view)
             
         except Exception as e:
             await ctx.send(f"❌ Erro ao carregar perfil: ```{str(e)}```")

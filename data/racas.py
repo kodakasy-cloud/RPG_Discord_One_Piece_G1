@@ -1,142 +1,119 @@
 from ui.cores import Cores
+import random
+
+# Configurações de raridade
+RARIDADES = {
+    "comum": {"chance": 40, "cor": Cores.CINZA_CLARO, "emoji": "⬜", "nome": "COMUM"},
+    "incomum": {"chance": 30, "cor": Cores.VERDE_CLARO, "emoji": "🟩", "nome": "INCOMUM"},
+    "raro": {"chance": 15, "cor": Cores.AZUL_FORTE, "emoji": "🟦", "nome": "RARO"},
+    "épico": {"chance": 10, "cor": Cores.ROXO_CLARO, "emoji": "🟪", "nome": "ÉPICO"},
+    "lendário": {"chance": 4, "cor": Cores.DOURADO, "emoji": "🟨", "nome": "LENDÁRIO"},
+    "mítico": {"chance": 1, "cor": Cores.VERMELHO_FORTE, "emoji": "🔴", "nome": "MÍTICO"}
+}
 
 RACAS = {
+    # ===== COMUNS (40%) =====
     "humano": {
         "nome": "Humano",
         "emoji": "👤",
+        "raridade": "comum",
         "descricao": "A raça mais comum do mundo. Versáteis e adaptáveis.",
-        "cor": Cores.CINZA_CLARO,
-        "bonus": {"Sem bonus"},
+        "bonus": {
+            "soco": 1
+        },
         "historia": "Os humanos são encontrados em todos os mares. Sua força está na adaptabilidade e determinação."
     },
     
-    "gigante": {
-        "nome": "Gigante",
-        "emoji": "🦍",
-        "descricao": "Guerreiros enormes de Elbaf. Força bruta incomparável.",
-        "cor": Cores.VERMELHO_FORTE,
-        "bonus": {
-            "vida": 5,
-            "vida_max": 5,
-            "armadura": 2,
-            "soco": 3,
-            "sorte": -2  # Gigantes são menos sortudos
-        },
-        "historia": "Originários da lendária ilha de Elbaf, os gigantes são guerreiros honrados que valorizam a força acima de tudo."
-    },
-    
+    # ===== INCOMUNS (25%) =====
     "tritao": {
         "nome": "Tritão",
         "emoji": "🧜‍♂️",
+        "raridade": "incomum",
         "descricao": "Habitantes de Fish-Man Island. Mestres do combate aquático.",
-        "cor": Cores.AZUL_FORTE,
         "bonus": {
-            "vida": 2,
-            "velocidade": 3,
-            "soco": 2,
-            "sorte": 2
+            "vida": 4,
+            "soco": 3,
         },
         "historia": "Seres que vivem nas profundezas do mar. Possuem força 10x maior que humanos quando na água."
     },
     
-    "sereia": {
-        "nome": "Sereia",
-        "emoji": "🧜‍♀️",
-        "descricao": "Seres místicos dos mares. Encantadoras e ágeis.",
-        "cor": Cores.AZUL_CLARO,
+    # ===== RAROS (15%) =====
+    "gigante": {
+        "nome": "Gigante",
+        "emoji": "🦍",
+        "raridade": "raro",
+        "descricao": "Guerreiros enormes de Elbaf. Força bruta incomparável.",
         "bonus": {
-            "velocidade": 3,
-            "sorte": 8
+            "vida": 10,
+            "vida_max": 10,
+            "armadura": 5,
+            "soco": 6,
         },
-        "historia": "Conhecidas por sua beleza e canto hipnótico. Podem respirar debaixo d'água e se mover com graça incomparável."
+        "historia": "Originários da lendária ilha de Elbaf, os gigantes são guerreiros honrados que valorizam a força acima de tudo."
     },
-    
-    "anjo": {
-        "nome": "Anjo (Skypiean)",
-        "emoji": "👼",
-        "descricao": "Habitantes de Skypiea. Possuem asas e vivem nas nuvens.",
-        "cor": Cores.BRANCO,
-        "bonus": {
-            "velocidade": 4,
-            "sorte": 4
-        },
-        "historia": "Povo que vive no céu, nas ilhas de nuvens. Possuem pequenas asas nas costas e grande agilidade."
-    },
-    
-    "minhokera": {
-        "nome": "Minhokera (Longarm)",
-        "emoji": "🦾",
-        "descricao": "Tribo dos braços longos. Alcance superior em combate.",
-        "cor": Cores.LARANJA_FORTE,
-        "bonus": {
-            "soco": 3,
-            "espada": 2,
-            "sorte": 1
-        },
-        "historia": "Possuem dois cotovelos em cada braço, permitindo golpes com alcance estendido e força incomum."
-    },
-    
-    "perna_longuíssima": {
-        "nome": "Perna Longa",
-        "emoji": "🦵",
-        "descricao": "Tribo das pernas longas. Chutes devastadores.",
-        "cor": Cores.VERDE_CLARO,
-        "bonus": {
-            "velocidade": 4,
-            "sorte": 2
-        },
-        "historia": "Pernas extraordinariamente longas que permitem velocidade superior e ataques poderosos."
-    },
-    
+     
+    # ===== ÉPICOS (10%) =====
     "anão": {
         "nome": "Anão (Tontatta)",
         "emoji": "🪴",
+        "raridade": "épico",
         "descricao": "Pequenos guerreiros de Green Bit. Velozes e mortais.",
-        "cor": Cores.VERDE_FORTE,
         "bonus": {
-            "velocidade": 5,
-            "sorte": 6
+            "velocidade": 20,
         },
         "historia": "Apesar do tamanho minúsculo, possuem velocidade impressionante e sorte incomum."
-    },
-    
+    },  
+    # ===== LENDÁRIOS (6%) =====
     "lumarias": {
         "nome": "Lunaria",
         "emoji": "🔥",
+        "raridade": "lendário",
         "descricao": "Tribo quase extinta. Poder do fogo nas costas.",
-        "cor": Cores.VERMELHO_FORTE,
         "bonus": {
-            "vida": 4,
-            "vida_max": 4,
-            "armadura": 3,
-            "sorte": 3
+            "vida": 8,
+            "vida_max": 8,
+            "armadura": 6,
         },
         "historia": "Raça lendária que podia criar chamas nas costas. Sobrevivem a qualquer condição extrema."
     },
     
-    "three_eyes": {
-        "nome": "Três Olhos",
-        "emoji": "👁️👁️👁️",
-        "descricao": "Tribo dos três olhos. Poderes mentais latentes.",
-        "cor": Cores.ROXO_CLARO,
+    # ===== MÍTICOS (4%) =====
+    "king": {
+        "nome": "Rei",
+        "emoji": "👑🔥",
+        "raridade": "mítico",
+        "descricao": "Poder supremo.",
         "bonus": {
-            "haki_observacao": 5,
-            "sorte": 7
+            "vida": 15,
+            "vida_max": 15,
+            "armadura": 5,
+            "velocidade": 10,
+            "soco": 5,
+            "espada": 5,
+            "arma": 5,
+            "fruta": 5
         },
-        "historia": "Possuem um terceiro olho que, quando desperto, concede habilidades especiais como ler Poneglyphs."
+        "historia": "????"
     },
-    
-    "bucaneiro": {
-        "nome": "Bucaneiro",
-        "emoji": "🪨",
-        "descricao": "Gigantes gentis. Força e coração gigantes.",
-        "cor": Cores.MARROM,
-        "bonus": {
-            "vida": 6,
-            "vida_max": 6,
-            "armadura": 3,
-            "sorte": 1
-        },
-        "historia": "Descendentes de gigantes que protegem os fracos. Conhecidos por sua bondade e força descomunal."
-    }
+
 }
+
+def sortear_raca():
+    """Sorteia uma raça baseada nas chances de raridade"""
+    # Primeiro, sorteia a raridade
+    raridade_sorteada = random.choices(
+        population=list(RARIDADES.keys()),
+        weights=[r['chance'] for r in RARIDADES.values()],
+        k=1
+    )[0]
+    
+    # Depois, filtra as raças dessa raridade
+    racas_da_raridade = [
+        (key, raca) for key, raca in RACAS.items() 
+        if raca['raridade'] == raridade_sorteada
+    ]
+    
+    # Sorteia uma raça específica dessa raridade
+    raca_sorteada = random.choice(racas_da_raridade)
+    
+    return raca_sorteada[0], raca_sorteada[1]

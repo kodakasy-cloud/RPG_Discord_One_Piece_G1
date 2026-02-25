@@ -1,4 +1,3 @@
-# views/perfil_menu_view.py
 import discord
 from ui.cores import Cores
 
@@ -26,6 +25,32 @@ class PerfilMenuView(discord.ui.View):
             color=cor
         )
         await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=tempo)
+    
+    async def abrir_sistema_racas(self, interaction: discord.Interaction):
+        """Abre o sistema de raças"""
+        
+        # Desabilita os botões do perfil
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(view=self)
+        
+        # Pega o comando de raças
+        racas_command = self.bot.get_command('racas')
+        
+        if racas_command:
+            # Cria um contexto falso
+            ctx = await self.bot.get_context(interaction.message)
+            ctx.author = interaction.user
+            ctx.command = racas_command
+            
+            # Executa o comando !racas
+            await racas_command(ctx)
+        else:
+            await interaction.followup.send("❌ Sistema de raças não encontrado!", ephemeral=True)
+            # Reativa os botões
+            for item in self.children:
+                item.disabled = False
+            await interaction.edit_original_response(view=self)
     
     # ===== LINHA 1 =====
     @discord.ui.button(label="🚶 ANDAR PELA ILHA", style=discord.ButtonStyle.primary, row=0)
@@ -99,14 +124,15 @@ class PerfilMenuView(discord.ui.View):
         )
     
     # ===== LINHA 3 =====
-    @discord.ui.button(label="🧬 RAÇA E SOBRENOMES", style=discord.ButtonStyle.success, row=2)
-    async def raca_sobrenomes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "🧬 Raça e Sobrenomes",
-            "Você verifica sua linhagem...\n\n🚧 **Em desenvolvimento!**",
-            Cores.VERDE_CLARO
-        )
+    @discord.ui.button(label="🎲 RAÇAS", style=discord.ButtonStyle.success, emoji="🎲", row=2)
+    async def racas_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Abre o sistema de raças"""
+        await self.abrir_sistema_racas(interaction)
+    
+    @discord.ui.button(label="📜 SOBRENOMES", style=discord.ButtonStyle.success, emoji="📜", row=2)
+    async def sobrenomes_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Abre o sistema de sobrenomes (mesmo comando)"""
+        await self.abrir_sistema_racas(interaction)
     
     @discord.ui.button(label="⚙️ CONFIGURAÇÃO", style=discord.ButtonStyle.success, row=2)
     async def configuracao(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -121,7 +147,8 @@ class PerfilMenuView(discord.ui.View):
             Cores.CINZA_CLARO
         )
     
-    @discord.ui.button(label="🚪 SAIR", style=discord.ButtonStyle.danger, row=2)
+    # ===== LINHA 4 =====
+    @discord.ui.button(label="🚪 SAIR", style=discord.ButtonStyle.danger, row=3)
     async def sair(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Desabilita todos os botões
         for item in self.children:

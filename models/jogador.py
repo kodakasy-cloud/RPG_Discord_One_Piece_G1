@@ -14,7 +14,7 @@ class Jogador(Base):
     vida = Column(Integer, default=0)
     vida_max = Column(Integer, default=0)
     energia = Column(Integer, default=0)
-    energia_max = Column(Integer, default=0)
+    energia_max = Column(Integer, default=10)
     armadura = Column(Integer, default=0)
     velocidade = Column(Integer, default=0)
     
