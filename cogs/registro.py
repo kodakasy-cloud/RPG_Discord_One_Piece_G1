@@ -1,82 +1,127 @@
-# cogs/registro.py
 import discord
 from discord.ext import commands
-import asyncio
 from ui.cores import Cores
-from views import IniciarView 
+from data.racas import sortear_raca
+from data.sobrenomes import sortear_sobrenome
+from views.faccao_select_view import FaccaoSelectView
+import asyncio
 
 class RegistroCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.registros_ativos = {}
     
-    @commands.command(name="registrar", aliases=["iniciar", "comecar", "aventura", "novo", "joinha", "op"])
+    @commands.command(name="registrar", aliases=["criar", "novo"])
+    @commands.cooldown(1, 120, commands.BucketType.user)
     async def registrar(self, ctx):
-        """Inicie sua jornada no Grand Line"""
-        user_id = ctx.author.id
+        """Inicia o processo de registro de um novo personagem"""
         
-        if user_id in self.registros_ativos:
-            await ctx.send("⚠️ Você já tem um registro ativo!")
+        if ctx.author.id in self.registros_ativos:
+            await ctx.send("❌ Você já tem um registro em andamento!", delete_after=5)
             return
         
-        self.registros_ativos[user_id] = True
+        self.registros_ativos[ctx.author.id] = True
         
-        intro_messages = [
-            ("👑", "O REI DOS PIRATAS, GOLD ROGER...", Cores.DOURADO),
-            ("⚔️", "CONQUISTOU TUDO NESTE MUNDO...", Cores.VERMELHO_FORTE),
-            ("🏴‍☠️", "SUA ÚLTIMA PALAVRA INSPIROU MILHARES:", Cores.AZUL_FORTE),
-            ("💰", "**'MEU TESOURO? SE QUISEREM, PODEM PEGAR!'**", Cores.DOURADO),
-            ("🌊", "**'PROCUREM POR ELE! EU DEIXEI TUDO NAQUELE LUGAR!'**", Cores.VERDE_CLARO),
-            ("⚜️", "E ASSIM, A GRANDE ERA DOS PIRATAS COMEÇOU...", Cores.LARANJA_FORTE)
-        ]
-        
-        # Primeira mensagem
-        embed = discord.Embed(
-            description="**UMA LENDA ESTÁ PRESTES A NASCER...**",
-            color=Cores.DOURADO
-        )
-        
-        # ENVIA a primeira mensagem e guarda em msg
-        msg = await ctx.send(embed=embed)
-        
-        # Sequência de mensagens (editando a mesma msg)
-        for emoji, texto, cor in intro_messages:
-            await asyncio.sleep(2.5)
-            embed = discord.Embed(
-                description=f"{emoji} **{texto}**",
-                color=cor
+        try:
+            # ===== ETAPA 1: SORTEANDO RAÇA =====
+            embed_raca = discord.Embed(
+                title="🎲 **SORTEANDO RAÇA**",
+                description="✨ **Girando a roleta...** ✨",
+                color=Cores.AZUL_FORTE
             )
-            await msg.edit(embed=embed)
-        
-        # Mensagem final com título épico
-        await asyncio.sleep(2)
-        
-        embed = discord.Embed(
-            title="⚜️ 𝐆𝐑𝐀𝐍𝐃 𝐋𝐈𝐍𝐄 𝐀𝐃𝐕𝐄𝐍𝐓𝐔𝐑𝐄 ⚜️",
-            description=(
-                f"\n"
-                "```\n"
-                "⚔️  𝐒𝐔𝐀 𝐋𝐄𝐍𝐃𝐀 𝐂𝐎𝐌𝐄Ç𝐀 𝐀𝐆𝐎𝐑𝐀  ⚔️\n"
-                "```\n\n"
-                "👑 **O título de Rei dos Piratas está vazio.**\n"
-                "🌊 **Os mares infinitos te aguardam.**\n"
-                "⚔️ **Aventureiros vieram e se foram.**\n"
-                "✨ **Mas lendas... lendas são para sempre.**\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "**🔥 VOCÊ NASCEU PARA SER LENDA! 🔥**"
-            ),
-            color=Cores.DOURADO
-        )
-        
-        embed.set_footer(text="Clique no botão abaixo para iniciar sua jornada")
-        
-        view = IniciarView(user_id)
-        await msg.edit(embed=embed, view=view)  # ← msg está definida aqui
-        
-        # Timeout
-        await asyncio.sleep(120)
-        if user_id in self.registros_ativos:
-            del self.registros_ativos[user_id]
+            embed_raca.set_footer(text="Aguarde...")
+            
+            # Já envia diretamente a primeira tela, sem mensagem inicial
+            msg = await ctx.send(embed=embed_raca)
+            await asyncio.sleep(3)
+            
+            # Sorteia a raça
+            raca_key, raca_info = sortear_raca()
+            
+            # Mostra a raça sorteada
+            bonus_raca = " • ".join([f"+{v} {k}" for k, v in raca_info['bonus'].items()])
+            
+            embed_raca_result = discord.Embed(
+                title=f"{raca_info['emoji']} **RAÇA SORTEADA**",
+                description=f"### {raca_info['nome']}",
+                color=Cores.AZUL_FORTE
+            )
+            
+            embed_raca_result.add_field(
+                name="📊 **Bônus**",
+                value=f"`{bonus_raca}`",
+                inline=False
+            )
+            
+            embed_raca_result.set_footer(text="Agora sorteando o sobrenome...")
+            await msg.edit(embed=embed_raca_result)
+            await asyncio.sleep(3)
+            
+            # ===== ETAPA 2: SORTEANDO SOBRENOME =====
+            embed_sobrenome = discord.Embed(
+                title="📜 **SORTEANDO SOBRENOME**",
+                description="✨ **Girando a roleta...** ✨",
+                color=Cores.ROXO_CLARO
+            )
+            embed_sobrenome.set_footer(text="Aguarde...")
+            await msg.edit(embed=embed_sobrenome)
+            await asyncio.sleep(3)
+            
+            # Sorteia o sobrenome
+            sobrenome_key, sobrenome_info = sortear_sobrenome()
+            
+            # ===== ETAPA 3: RESULTADO FINAL =====
+            embed_final = discord.Embed(
+                title="🎲 **SORTEIO COMPLETO**",
+                description=f"### Parabéns {ctx.author.mention}!",
+                color=Cores.DOURADO
+            )
+            
+            # Raça
+            bonus_raca = " • ".join([f"+{v} {k}" for k, v in raca_info['bonus'].items()])
+            embed_final.add_field(
+                name=f"{raca_info['emoji']} **{raca_info['nome']}**",
+                value=f"**Bônus:** `{bonus_raca}`",
+                inline=True
+            )
+            
+            # Sobrenome
+            if sobrenome_key != 'none':
+                bonus_sobrenome = " • ".join([f"+{v} {k}" for k, v in sobrenome_info['bonus'].items()])
+                embed_final.add_field(
+                    name=f"{sobrenome_info['emoji']} **{sobrenome_info['nome']}**",
+                    value=f"**Bônus:** `{bonus_sobrenome}`",
+                    inline=True
+                )
+            
+            embed_final.set_footer(text="Agora escolha sua facção abaixo:")
+            
+            # View de escolha de facção
+            view = FaccaoSelectView(
+                ctx.author.id,
+                ctx.author.name,
+                {"key": raca_key, "info": raca_info},
+                {"key": sobrenome_key, "info": sobrenome_info},
+                self.bot
+            )
+            
+            await msg.edit(embed=embed_final, view=view)
+            
+        finally:
+            self.registros_ativos.pop(ctx.author.id, None)
+    
+    @registrar.error
+    async def registrar_error(self, ctx, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            minutos = int(error.retry_after // 60)
+            segundos = int(error.retry_after % 60)
+            
+            embed = discord.Embed(
+                title="⏳ **AGUARDE**",
+                description=f"Tente novamente em **{minutos}min {segundos}s**.",
+                color=Cores.VERMELHO_FORTE
+            )
+            await ctx.send(embed=embed, delete_after=5)
 
 async def setup(bot):
     await bot.add_cog(RegistroCog(bot))

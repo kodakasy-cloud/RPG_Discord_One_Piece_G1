@@ -7,13 +7,13 @@ INIMIGO_TUTORIAL = {
     "nome": "Bandido",
     "descricao": "Um bandido qualquer, nem nome tem de tão insignificante!",
     "imagem_path": IMAGEM_BANDIDO, 
-    "vida": 8,
-    "vida_max": 8,
+    "vida": 20,
+    "vida_max": 20,
     "soco": 1,
     "defesa": 0,
     "velocidade": 0,
     "energia": 0,
-    "energia_max": 4,
+    "energia_max": 10,
     "habilidades": {
         "basico": {
             "nome": "Golpe Sujo",
@@ -25,8 +25,8 @@ INIMIGO_TUTORIAL = {
         "especial": {
             "nome": "Facada Traiçoeira",
             "descricao": "Uma facada nas costas enquanto você não olha.",
-            "dano": 5,
-            "custo_energia": 4,
+            "dano": 3,
+            "custo_energia": 3,
             "ganho_energia": 0
         }
     },

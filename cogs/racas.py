@@ -6,9 +6,7 @@ from utils.racas_utils import (
     sortear_raca_e_sobrenome,
     resumo_racas,
     resumo_sobrenomes,
-    resumo_probabilidades,
-    get_info_raca,
-    get_info_sobrenome
+    resumo_probabilidades
 )
 from data.racas import RACAS, RARIDADES
 from data.sobrenomes import SOBRENOMES
@@ -76,11 +74,9 @@ class RacasView(View):
         await interaction.response.edit_message(view=self)
         
         try:
-            # SORTEIA A RAÇA
             from data.racas import sortear_raca
             raca_key, raca_info = sortear_raca()
             
-            # PRIMEIRA TELA: Apenas a descrição
             embed_descricao = discord.Embed(
                 description=f"**Descrição:**\n{raca_info['descricao']}",
                 color=RARIDADES[raca_info['raridade']]['cor']
@@ -90,7 +86,6 @@ class RacasView(View):
             await interaction.edit_original_response(embed=embed_descricao)
             await asyncio.sleep(3)
             
-            # SEGUNDA TELA: Resultado completo
             bonus = ", ".join([f"+{v} {k}" for k, v in raca_info['bonus'].items()]) or "Nenhum bônus"
             
             embed_resultado = discord.Embed(
@@ -144,14 +139,11 @@ class RacasView(View):
         await interaction.response.edit_message(view=self)
         
         try:
-            # SORTEIA O SOBRENOME
             from data.sobrenomes import sortear_sobrenome
             sobrenome_key, sobrenome_info = sortear_sobrenome()
             
-            # COR PARA O EMBED
             cor = RARIDADES[sobrenome_info['raridade']]['cor'] if sobrenome_info['raridade'] in RARIDADES else Cores.ROXO_CLARO
             
-            # PRIMEIRA TELA: Apenas a descrição
             embed_descricao = discord.Embed(
                 description=f"**Descrição:**\n{sobrenome_info['descricao']}",
                 color=cor
@@ -161,7 +153,6 @@ class RacasView(View):
             await interaction.edit_original_response(embed=embed_descricao)
             await asyncio.sleep(3)
             
-            # SEGUNDA TELA: Resultado completo
             bonus = ", ".join([f"+{v} {k}" for k, v in sobrenome_info['bonus'].items()]) or "Nenhum bônus"
             
             embed_resultado = discord.Embed(
@@ -216,34 +207,26 @@ class RacasView(View):
         await interaction.response.edit_message(view=self)
         
         try:
-            # SORTEIA AMBOS
             resultado = sortear_raca_e_sobrenome()
             raca = resultado["raca"]["info"]
             sobrenome = resultado["sobrenome"]["info"]
             
-            # PRIMEIRA TELA: Apenas as descrições
-            embed_descricao = discord.Embed(
-                color=Cores.DOURADO
-            )
-            
+            embed_descricao = discord.Embed(color=Cores.DOURADO)
             embed_descricao.add_field(
                 name="🎲 RAÇA",
                 value=f"**Descrição:** {raca['descricao']}",
                 inline=False
             )
-            
             embed_descricao.add_field(
                 name="📜 SOBRENOME",
                 value=f"**Descrição:** {sobrenome['descricao']}",
                 inline=False
             )
-            
             embed_descricao.set_footer(text="🤔 Quais serão? Revelando em 3 segundos...")
             
             await interaction.edit_original_response(embed=embed_descricao)
             await asyncio.sleep(3)
             
-            # SEGUNDA TELA: Resultado completo
             bonus_raca = ", ".join([f"+{v} {k}" for k, v in raca['bonus'].items()]) or "Nenhum"
             bonus_sobrenome = ", ".join([f"+{v} {k}" for k, v in sobrenome['bonus'].items()]) or "Nenhum"
             
@@ -261,13 +244,11 @@ class RacasView(View):
                 value=f"{RARIDADES[raca['raridade']]['emoji']} {raca['raridade']}\n➕ {bonus_raca}",
                 inline=True
             )
-            
             embed_resultado.add_field(
                 name=f"{sobrenome['emoji']} Sobrenome: {sobrenome['nome']}",
                 value=f"{RARIDADES.get(sobrenome['raridade'], {'emoji': '⬜'})['emoji']} {sobrenome['raridade']}\n➕ {bonus_sobrenome}",
                 inline=True
             )
-            
             embed_resultado.add_field(
                 name="📊 Total de Bônus",
                 value=total,
@@ -292,51 +273,103 @@ class RacasView(View):
 
     @discord.ui.button(label="🏠 MENU", style=discord.ButtonStyle.success, row=2)
     async def menu_principal_button(self, interaction: discord.Interaction, button: Button):
-        """Volta para o menu principal do jogo (perfil) - EDITANDO a mensagem atual"""
+        """Volta para o perfil do jogador com os botões"""
         
-        # Desabilita os botões para não clicarem de novo
         for item in self.children:
             item.disabled = True
         await interaction.response.edit_message(view=self)
         
         try:
-            # Pega o comando de perfil
-            perfil_command = self.bot.get_command('perfil')
+            from database.connection import SessionLocal
+            from models.usuario import Usuario
+            from models.jogador import Jogador
+            from data.faccao_config import FACCAO_INFO
+            from views.perfil_menu_view import PerfilMenuView
+            from ui.cores import Cores
             
-            if perfil_command:
-                # Cria um contexto falso
-                ctx = await self.bot.get_context(interaction.message)
-                ctx.author = interaction.user
-                ctx.command = perfil_command
+            db = SessionLocal()
+            try:
+                usuario = db.query(Usuario).filter_by(
+                    discord_id=str(interaction.user.id)
+                ).first()
                 
-                # Chama o comando e CAPTURA o embed que ele enviaria
-                original_send = ctx.send
-                captured_embed = None
-                
-                async def fake_send(*args, **kwargs):
-                    nonlocal captured_embed
-                    if 'embed' in kwargs:
-                        captured_embed = kwargs['embed']
-                    elif args and isinstance(args[0], discord.Embed):
-                        captured_embed = args[0]
-                    return None  # Não envia nada
-                
-                ctx.send = fake_send
-                
-                # Executa o comando
-                await perfil_command(ctx)
-                
-                # Se capturou o embed, edita a mensagem atual
-                if captured_embed:
-                    await interaction.edit_original_response(embed=captured_embed, view=None)
-                else:
-                    # Se não conseguiu capturar, volta para o menu
-                    await self.menu_racas(interaction)
-            else:
-                await self.menu_racas(interaction)
+                if usuario:
+                    jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
+                    
+                    if jogador:
+                        info_faccao = FACCAO_INFO.get(jogador.faccao, {})
+                        
+                        embed = discord.Embed(
+                            title=f"⚔️ **PERFIL DE {interaction.user.name.upper()}** ⚔️",
+                            color=info_faccao.get('cor', Cores.AZUL_FORTE)
+                        )
+                        
+                        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+                        
+                        raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
+                        sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
+                        
+                        info_basica = (
+                            f"**Facção:** {info_faccao.get('emoji', '')} {info_faccao.get('nome', 'Desconhecida')}\n"
+                            f"**Nível:** {jogador.nivel}\n"
+                            f"**XP:** {jogador.xp}\n"
+                            f"**Berries:** 💰 {jogador.berries}\n"
+                            f"**Raça:** {raca_text}\n"
+                            f"**Sobrenome:** {sobrenome_text}\n"
+                            f"**Registro:** {usuario.data_registro.strftime('%d/%m/%Y')}"
+                        )
+                        embed.add_field(name="📋 **INFORMAÇÕES**", value=info_basica, inline=False)
+                        
+                        status_combate = (
+                            f"❤️ **Vida:** {jogador.vida}/{jogador.vida_max}\n"
+                            f"🛡️ **Armadura:** {jogador.armadura}\n"
+                            f"⚡ **Velocidade:** {jogador.velocidade}\n"
+                            f"⚔️ **Vitórias:** {jogador.vitorias}\n"
+                            f"💔 **Derrotas:** {jogador.derrotas}"
+                        )
+                        embed.add_field(name="⚔️ **COMBATE**", value=status_combate, inline=True)
+                        
+                        estilos = (
+                            f"👊 **Soco:** {jogador.soco}\n"
+                            f"⚔️ **Espada:** {jogador.espada}\n"
+                            f"🔫 **Arma:** {jogador.arma}\n"
+                            f"🍎 **Fruta:** {jogador.fruta}"
+                        )
+                        embed.add_field(name="🥋 **HABILIDADES**", value=estilos, inline=True)
+                        
+                        hakis = (
+                            f"🛡️ **Armamento:** {jogador.haki_armamento}\n"
+                            f"👁️ **Observação:** {jogador.haki_observacao}\n"
+                            f"👑 **Rei:** {jogador.haki_rei}"
+                        )
+                        embed.add_field(name="🌀 **HAKIS**", value=hakis, inline=True)
+                        
+                        xp_proximo = jogador.nivel * 100
+                        xp_atual = jogador.xp
+                        percentual = min(100, int((xp_atual / xp_proximo) * 100))
+                        barra = "🟩" * (percentual // 10) + "⬜" * (10 - (percentual // 10))
+                        
+                        embed.add_field(
+                            name="📊 **PROGRESSÃO**",
+                            value=f"**Nível {jogador.nivel}**\n{barra} {percentual}%\n`{xp_atual}/{xp_proximo} XP`",
+                            inline=False
+                        )
+                        
+                        embed.set_footer(text=f"ID: {jogador.id} • Use o menu abaixo para navegar")
+                        
+                        # CRIA A VIEW DO PERFIL COM OS BOTÕES
+                        view = PerfilMenuView(interaction.user.id, jogador, self.bot)
+                        
+                        await interaction.edit_original_response(embed=embed, view=view)
+                        return
+                        
+            finally:
+                db.close()
+            
+            await self.menu_racas(interaction)
                 
         except Exception as e:
-            print(f"Erro ao chamar perfil: {e}")
+            print(f"Erro ao voltar para o perfil: {e}")
             await self.menu_racas(interaction)
 
 
@@ -369,12 +402,35 @@ class Racas(commands.Cog):
         view = RacasView(ctx, self.bot)
         view.message = await ctx.send(embed=embed, view=view)
 
+    async def mostrar_menu_racas(self, interaction: discord.Interaction, ctx):
+        """Mostra o menu de raças editando a mensagem atual (chamado pelo perfil)"""
+        
+        embed = discord.Embed(
+            title="🏴‍☠️ SISTEMA DE RAÇAS",
+            description="Escolha uma opção abaixo:",
+            color=Cores.DOURADO
+        )
+        
+        embed.add_field(
+            name="**COMANDOS**",
+            value=(
+                "**Linha 1** • 🎲 Sortear Raça | 📋 Lista Raças\n"
+                "**Linha 2** • 📜 Sortear Sobrenome | 📋 Lista Sobrenomes\n"
+                "**Linha 3** • ⭐ Sortear Ambos | 📊 Chances | 🏠 Menu"
+            ),
+            inline=False
+        )
+        
+        embed.set_footer(text=f"Solicitado por {ctx.author.name}")
+        
+        view = RacasView(ctx, self.bot)
+        await interaction.edit_original_response(embed=embed, view=view)
+
     @racas.command(name="info")
     async def info_raca_sobrenome(self, ctx, *, nome: str):
         """Mostra informações detalhadas de uma raça ou sobrenome"""
         nome = nome.lower().strip()
         
-        # Busca em raças
         for key, raca in RACAS.items():
             if key == nome or raca['nome'].lower() == nome:
                 bonus = ", ".join([f"+{v} {k}" for k, v in raca['bonus'].items()]) or "Nenhum"
@@ -391,7 +447,6 @@ class Racas(commands.Cog):
                 await ctx.send(embed=embed)
                 return
         
-        # Busca em sobrenomes
         for key, sob in SOBRENOMES.items():
             if key == nome or sob['nome'].lower() == nome:
                 bonus = ", ".join([f"+{v} {k}" for k, v in sob['bonus'].items()]) or "Nenhum"

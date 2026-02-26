@@ -13,32 +13,36 @@ RARIDADES = {
 
 RACAS = {
     # ===== COMUNS (40%) =====
-    "humano": {
+    "Humano": {
         "nome": "Humano",
         "emoji": "👤",
         "raridade": "comum",
         "descricao": "A raça mais comum do mundo. Versáteis e adaptáveis.",
         "bonus": {
-            "soco": 1
+            "soco": 1,
+            "vida": 5,
+            "vida_max": 5,
+            "armadura": 1,
         },
         "historia": "Os humanos são encontrados em todos os mares. Sua força está na adaptabilidade e determinação."
     },
     
     # ===== INCOMUNS (25%) =====
-    "tritao": {
+    "Tritao": {
         "nome": "Tritão",
         "emoji": "🧜‍♂️",
         "raridade": "incomum",
         "descricao": "Habitantes de Fish-Man Island. Mestres do combate aquático.",
         "bonus": {
-            "vida": 4,
+            "vida": 5,
+            "vida_max": 5,
             "soco": 3,
         },
         "historia": "Seres que vivem nas profundezas do mar. Possuem força 10x maior que humanos quando na água."
     },
     
     # ===== RAROS (15%) =====
-    "gigante": {
+    "Gigante": {
         "nome": "Gigante",
         "emoji": "🦍",
         "raridade": "raro",
@@ -46,14 +50,14 @@ RACAS = {
         "bonus": {
             "vida": 10,
             "vida_max": 10,
-            "armadura": 5,
-            "soco": 6,
+            "armadura": 3,
+            "soco": 3,
         },
         "historia": "Originários da lendária ilha de Elbaf, os gigantes são guerreiros honrados que valorizam a força acima de tudo."
     },
      
     # ===== ÉPICOS (10%) =====
-    "anão": {
+    "Anão": {
         "nome": "Anão (Tontatta)",
         "emoji": "🪴",
         "raridade": "épico",
@@ -64,21 +68,21 @@ RACAS = {
         "historia": "Apesar do tamanho minúsculo, possuem velocidade impressionante e sorte incomum."
     },  
     # ===== LENDÁRIOS (6%) =====
-    "lumarias": {
+    "Lumarias": {
         "nome": "Lunaria",
         "emoji": "🔥",
         "raridade": "lendário",
         "descricao": "Tribo quase extinta. Poder do fogo nas costas.",
         "bonus": {
-            "vida": 8,
-            "vida_max": 8,
-            "armadura": 6,
+            "vida": 20,
+            "vida_max": 20,
+            "armadura": 5,
         },
         "historia": "Raça lendária que podia criar chamas nas costas. Sobrevivem a qualquer condição extrema."
     },
     
     # ===== MÍTICOS (4%) =====
-    "king": {
+    "King": {
         "nome": "Rei",
         "emoji": "👑🔥",
         "raridade": "mítico",

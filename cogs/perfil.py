@@ -1,134 +1,142 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 from database.connection import SessionLocal
 from models.usuario import Usuario
 from models.jogador import Jogador
 from data.faccao_config import FACCAO_INFO
-from utils.faccao_utils import get_stats_faccao
 from ui.cores import Cores
-from datetime import datetime
 from views.perfil_menu_view import PerfilMenuView
+from datetime import datetime
 
 class PerfilCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
+    def criar_barra(self, valor, maximo, tamanho=10):
+        """Cria uma barra visual"""
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟩" * cheios + "⬜" * (tamanho - cheios)
+    
+    def criar_barra_vida(self, valor, maximo, tamanho=5):
+        """Cria uma barra de vida vermelha"""
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟥" * cheios + "⬜" * (tamanho - cheios)
+    
+    def criar_barra_energia(self, valor, maximo, tamanho=5):
+        """Cria uma barra de energia laranja"""
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟧" * cheios + "⬜" * (tamanho - cheios)
+    
     @commands.command(name="perfil", aliases=["profile", "status", "stats"])
     async def perfil(self, ctx, membro: discord.Member = None):
-        """Veja o perfil de um jogador com menu interativo"""
+        """Veja o perfil de um jogador"""
         
-        # Se não mencionar ninguém, mostra o próprio perfil
         if membro is None:
             membro = ctx.author
         
         db = SessionLocal()
         try:
-            # Busca o usuário no banco
             usuario = db.query(Usuario).filter_by(
                 discord_id=str(membro.id)
             ).first()
             
             if not usuario:
                 if membro == ctx.author:
-                    await ctx.send("❌ Você ainda não tem um personagem! Use `!registrar` para criar um.")
+                    await ctx.send("❌ Você ainda não tem um personagem! Use `!registrar`")
                 else:
-                    await ctx.send(f"❌ {membro.name} ainda não tem um personagem!")
+                    await ctx.send(f"❌ {membro.name} não tem personagem!")
                 return
             
-            # Busca o jogador
             jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
             if not jogador:
                 await ctx.send("❌ Erro: personagem não encontrado!")
                 return
             
-            # Pega informações da facção
             info_faccao = FACCAO_INFO.get(jogador.faccao, {})
             
-            # Cria o embed do perfil
+            # ===== EMBED =====
             embed = discord.Embed(
-                title=f"⚔️ **PERFIL DE {membro.name.upper()}** ⚔️",
+                title=f"",
                 color=info_faccao.get('cor', Cores.AZUL_FORTE)
             )
             
-            # Thumbnail com avatar do usuário
             embed.set_thumbnail(url=membro.display_avatar.url)
             
-            # Raça e Sobrenome (com tratamento de erro caso não existam no modelo)
+            # ===== BERRIES LOGO ABAIXO DA IMAGEM =====
+            embed.add_field(name="", value=f"💰 {jogador.berries} berries", inline=False)
+            embed.add_field(name="", value="\u200b", inline=False)  # Espaço mínimo
+            
+            # ===== CAMPOS =====
             raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
             sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
             
-            # Informações básicas
-            info_basica = (
-                f"**Facção:** {info_faccao.get('emoji', '')} {info_faccao.get('nome', 'Desconhecida')}\n"
-                f"**Nível:** {jogador.nivel}\n"
-                f"**XP:** {jogador.xp}\n"
-                f"**Berries:** 💰 {jogador.berries}\n"
-                f"**Raça:** {raca_text}\n"
-                f"**Sobrenome:** {sobrenome_text}\n"
-                f"**Registro:** {usuario.data_registro.strftime('%d/%m/%Y')}"
-            )
-            embed.add_field(name="📋 **INFORMAÇÕES**", value=info_basica, inline=False)
+            # Linha 1: Nome e Sobrenome
+            embed.add_field(name="", value=f"⚔️ {membro.name} • 📜 {sobrenome_text}", inline=False)
             
-            # Status de combate
-            status_combate = (
-                f"❤️ **Vida:** {jogador.vida}/{jogador.vida_max}\n"
-                f"🛡️ **Armadura:** {jogador.armadura}\n"
-                f"⚡ **Velocidade:** {jogador.velocidade}\n"
-                f"⚔️ **Vitórias:** {jogador.vitorias}\n"
-                f"💔 **Derrotas:** {jogador.derrotas}"
-            )
-            embed.add_field(name="⚔️ **COMBATE**", value=status_combate, inline=True)
+            # Linha 2: Facção e Raça
+            embed.add_field(name="", value=f"{info_faccao.get('emoji', '')} {info_faccao.get('nome', '???')} • 🧬 {raca_text}", inline=False)
             
-            # Estilos de luta
-            estilos = (
-                f"👊 **Soco:** {jogador.soco}\n"
-                f"⚔️ **Espada:** {jogador.espada}\n"
-                f"🔫 **Arma:** {jogador.arma}\n"
-                f"🍎 **Fruta:** {jogador.fruta}"
-            )
-            embed.add_field(name="🥋 **HABILIDADES**", value=estilos, inline=True)
+            # Separador
+            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
             
-            # Hakis
-            hakis = (
-                f"🛡️ **Armamento:** {jogador.haki_armamento}\n"
-                f"👁️ **Observação:** {jogador.haki_observacao}\n"
-                f"👑 **Rei:** {jogador.haki_rei}"
-            )
-            embed.add_field(name="🌀 **HAKIS**", value=hakis, inline=True)
+            # VIDA
+            embed.add_field(name="", value="❤️ VIDA", inline=False)
+            barra_vida = self.criar_barra_vida(jogador.vida, jogador.vida_max)
+            embed.add_field(name="", value=f"{barra_vida} {jogador.vida}/{jogador.vida_max}", inline=False)
             
-            # Barra de XP
+            # ENERGIA
+            embed.add_field(name="", value="⚡ ENERGIA", inline=False)
+            barra_energia = self.criar_barra_energia(jogador.energia, jogador.energia_max)
+            embed.add_field(name="", value=f"{barra_energia} {jogador.energia}/{jogador.energia_max}", inline=False)
+            
+            # Separador
+            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+            
+            # STATUS
+            embed.add_field(name="", value="⚔️ STATUS", inline=False)
+            embed.add_field(name="", value=f"🛡️ Armadura: {jogador.armadura} • ⚔️ Vitórias: {jogador.vitorias}", inline=False)
+            embed.add_field(name="", value=f"🏃 Velocidade: {jogador.velocidade} • 💔 Derrotas: {jogador.derrotas}", inline=False)
+            
+            # Separador
+            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+            
+            # HABILIDADES
+            embed.add_field(name="", value="🥋 HABILIDADES", inline=False)
+            embed.add_field(name="", value=f"👊 Soco: {jogador.soco} • ⚔️ Espada: {jogador.espada}", inline=False)
+            embed.add_field(name="", value=f"🍎 Fruta: {jogador.fruta} • 🔫 Arma: {jogador.arma}", inline=False)
+            
+            # Separador
+            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+            
+            # PROGRESSÃO
             xp_proximo = jogador.nivel * 100
-            xp_atual = jogador.xp
-            percentual = min(100, int((xp_atual / xp_proximo) * 100))
+            barra_xp = self.criar_barra(jogador.xp, xp_proximo)
+            embed.add_field(name="", value="📊 PROGRESSÃO", inline=False)
+            embed.add_field(name="", value=f"NÍVEL {jogador.nivel}", inline=False)
+            embed.add_field(name="", value=f"{barra_xp}", inline=False)
+            embed.add_field(name="", value=f"{jogador.xp}/{xp_proximo} XP", inline=False)
             
-            barra = "🟩" * (percentual // 10) + "⬜" * (10 - (percentual // 10))
+            # Separador
+            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━", inline=False)
             
-            embed.add_field(
-                name="📊 **PROGRESSÃO**",
-                value=f"**Nível {jogador.nivel}**\n{barra} {percentual}%\n`{xp_atual}/{xp_proximo} XP`",
-                inline=False
-            )
+            # ID e Data
+            embed.add_field(name="", value=f"ID: {jogador.id} • Update v0.5 • {usuario.data_registro.strftime('%d/%m/%Y')}", inline=False)
             
-            # Footer
-            embed.set_footer(text=f"ID: {jogador.id} • Use o menu abaixo para navegar")
-            
-            # ===== MENU INTERATIVO =====
             view = PerfilMenuView(ctx.author.id, jogador, self.bot)
             view.mensagem_original = await ctx.send(embed=embed, view=view)
             
         except Exception as e:
-            await ctx.send(f"❌ Erro ao carregar perfil: ```{str(e)}```")
+            await ctx.send(f"❌ Erro: ```{str(e)}```")
         finally:
             db.close()
     
     @commands.command(name="rank", aliases=["ranking", "top"])
     async def rank(self, ctx):
-        """Mostra o ranking dos jogadores"""
-        
         db = SessionLocal()
         try:
-            # Busca top 10 jogadores por nível
             top_jogadores = db.query(Jogador).order_by(
                 Jogador.nivel.desc(),
                 Jogador.xp.desc()
@@ -139,32 +147,27 @@ class PerfilCog(commands.Cog):
                 return
             
             embed = discord.Embed(
-                title="🏆 **RANKING GRAND LINE** 🏆",
-                description="Os guerreiros mais poderosos dos mares:",
+                title="🏆 **RANKING**",
                 color=Cores.DOURADO
             )
             
             medalhas = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
             
-            ranking_text = ""
-            for i, jogador in enumerate(top_jogadores):
-                usuario = db.query(Usuario).filter_by(id=jogador.usuario_id).first()
-                if usuario:
-                    info = FACCAO_INFO.get(jogador.faccao, {})
-                    medalha = medalhas[i] if i < len(medalhas) else "•"
-                    
-                    ranking_text += (
-                        f"{medalha} **{usuario.nome_discord}** {info.get('emoji', '')}\n"
-                        f"┗ Nv.{jogador.nivel} | ⚔️ {jogador.vitorias} vitórias | 💰 {jogador.berries} berries\n"
-                    )
+            texto = ""
+            for i, j in enumerate(top_jogadores):
+                user = db.query(Usuario).filter_by(id=j.usuario_id).first()
+                if user:
+                    medalha = medalhas[i]
+                    faccao = FACCAO_INFO.get(j.faccao, {}).get('emoji', '')
+                    texto += f"{medalha} **{user.nome_discord}** {faccao}\n"
+                    texto += f"┗ Nv.{j.nivel} | ⚔️ {j.vitorias}\n\n"
             
-            embed.add_field(name="⚔️ **TOP 10 PIRATAS**", value=ranking_text, inline=False)
-            embed.set_footer(text="Use !perfil @usuário para ver detalhes")
+            embed.add_field(name="⚔️ **TOP 10**", value=texto, inline=False)
             
             await ctx.send(embed=embed)
             
         except Exception as e:
-            await ctx.send(f"❌ Erro ao carregar ranking: ```{str(e)}```")
+            await ctx.send(f"❌ Erro: ```{str(e)}```")
         finally:
             db.close()
 

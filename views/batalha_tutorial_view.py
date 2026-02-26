@@ -1,4 +1,3 @@
-# views/batalha_tutorial_view.py
 import discord
 import asyncio
 import random
@@ -408,6 +407,7 @@ class BatalhaTutorialView(discord.ui.View):
             from models.usuario import Usuario
             from models.jogador import Jogador
             from data.faccao_config import FACCAO_INFO
+            from views.perfil_menu_view import PerfilMenuView  # <-- IMPORTANTE: Importar a view do perfil
             
             db = SessionLocal()
             try:
@@ -441,7 +441,7 @@ class BatalhaTutorialView(discord.ui.View):
                     status_combate = (
                         f"❤️ **Vida:** {jogador.vida}/{jogador.vida_max}\n"
                         f"🛡️ **Armadura:** {jogador.armadura}\n"
-                        f"⚡ **Velocidade:** {jogador.velocidade}\n"
+                        f"🏃 **Velocidade:** {jogador.velocidade}\n"
                         f"⚔️ **Vitórias:** {jogador.vitorias}\n"
                         f"💔 **Derrotas:** {jogador.derrotas}"
                     )
@@ -479,8 +479,11 @@ class BatalhaTutorialView(discord.ui.View):
                     # Footer
                     embed_perfil.set_footer(text="Use !perfil para ver novamente")
                     
-                    # ===== ATUALIZA A MESMA MENSAGEM PARA O PERFIL =====
-                    await self.mensagem_combate.edit(embed=embed_perfil, view=None, attachments=[])
+                    # ===== CRIA A VIEW DO PERFIL COM BOTÕES =====
+                    view_perfil = PerfilMenuView(interaction.user.id, jogador, self.bot)
+                    
+                    # ===== ATUALIZA A MESMA MENSAGEM PARA O PERFIL COM BOTÕES =====
+                    await self.mensagem_combate.edit(embed=embed_perfil, view=view_perfil, attachments=[])
                 else:
                     # Fallback se não encontrar o jogador
                     embed_fallback = discord.Embed(

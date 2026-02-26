@@ -1,161 +1,243 @@
-# views/confirmacao_view.py
 import discord
-import asyncio
-from ui.cores import Cores
+from discord.ui import View, Button
 from database.connection import SessionLocal
 from models.usuario import Usuario
 from models.jogador import Jogador
-from data.faccao_config import FACCAO_INFO
-from utils.faccao_utils import get_stats_faccao
-from datetime import datetime
-from views.select_faccao_view import mostrar_selecao_faccao
+from ui.cores import Cores
+from data.data_fac_info import BASE_STATS, FACCOES
+from data.inimigos_tutorial import INIMIGO_TUTORIAL
+from views.batalha_tutorial_view import BatalhaTutorialView
+import asyncio
 
-class ConfirmacaoView(discord.ui.View):
-    def __init__(self, user_id: int, faccao: str, bot):
-        super().__init__(timeout=120)
+# Importação corrigida - não importar IniciarTutorialView daqui
+# from cogs.tutorial_combate import IniciarTutorialView
+
+class ConfirmacaoView(View):
+    def __init__(self, user_id, nome_usuario, faccao, raca_info, sobrenome_info):
+        super().__init__(timeout=60)
         self.user_id = user_id
+        self.nome_usuario = nome_usuario
         self.faccao = faccao
-        self.bot = bot 
-    
+        self.raca_info = raca_info
+        self.sobrenome_info = sobrenome_info
+        self.mensagem = None
+        
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user_id:
-            embed = discord.Embed(
-                description="❌ **Apenas quem iniciou pode interagir!**",
-                color=Cores.VERMELHO_FORTE
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.response.send_message("❌ Esta confirmação não é para você!", ephemeral=True)
             return False
         return True
     
-    @discord.ui.button(label="✅ CONFIRMAR", style=discord.ButtonStyle.green)
-    async def confirmar(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="✅ CONFIRMAR", style=discord.ButtonStyle.success)
+    async def confirmar(self, interaction: discord.Interaction, button: Button):
         await self.criar_personagem(interaction)
     
-    @discord.ui.button(label="↩️ VOLTAR", style=discord.ButtonStyle.gray)
-    async def voltar(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(description="⚔️ **Voltando...**", color=Cores.VERDE_CLARO)
-        await interaction.response.edit_message(embed=embed, view=None)
-        await mostrar_selecao_faccao(interaction)
-    
-    @discord.ui.button(label="❌ CANCELAR", style=discord.ButtonStyle.red)
-    async def cancelar(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="❌ CANCELAR", style=discord.ButtonStyle.danger)
+    async def cancelar(self, interaction: discord.Interaction, button: Button):
         embed = discord.Embed(
-            title="⚜️ REGISTRO CANCELADO",
-            description="Os mares continuarão te esperando... 👋",
+            title="❌ **REGISTRO CANCELADO**",
+            description="Use `!registrar` quando quiser tentar novamente.",
             color=Cores.VERMELHO_FORTE
         )
-        await interaction.response.edit_message(embed=embed, view=None)
+        
+        for item in self.children:
+            item.disabled = True
+            
+        await interaction.response.edit_message(embed=embed, view=self)
     
     async def criar_personagem(self, interaction: discord.Interaction):
-        """Cria o personagem no banco de dados com contagem regressiva"""
+        """Cria o personagem no banco de dados e inicia o tutorial"""
         
         db = SessionLocal()
         try:
-            # Verifica se já existe
-            existe = db.query(Usuario).filter_by(discord_id=str(interaction.user.id)).first()
-            if existe:
+            # Verifica se já existe usuário
+            usuario = db.query(Usuario).filter_by(
+                discord_id=str(self.user_id)
+            ).first()
+            
+            if usuario:
                 embed = discord.Embed(
-                    title="⚠️ AVENTURA JÁ INICIADA",
+                    title="❌ **ERRO**",
                     description="Você já possui um personagem!",
-                    color=Cores.AMARELO
+                    color=Cores.VERMELHO_FORTE
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
                 return
             
-            # Cria usuário
-            novo_usuario = Usuario(
-                discord_id=str(interaction.user.id),
+            # Cria novo usuário
+            usuario = Usuario(
+                discord_id=str(self.user_id),
                 nome_discord=interaction.user.name,
-                data_registro=datetime.now()
+                data_registro=discord.utils.utcnow()
             )
-            db.add(novo_usuario)
+            db.add(usuario)
             db.flush()
             
-            # Pega stats da facção
-            stats = get_stats_faccao(self.faccao)
-            info = FACCAO_INFO[self.faccao]
+            # ===== CÁLCULO DOS STATUS =====
+            stats_finais = BASE_STATS.copy()
             
-            # Cria jogador
+            # Soma stats da facção
+            stats_faccao = FACCOES.get(self.faccao, {})
+            for stat, valor in stats_faccao.items():
+                stats_finais[stat] = stats_finais.get(stat, 0) + valor
+            
+            # Soma bônus da raça
+            bonus_raca = self.raca_info['info'].get('bonus', {})
+            for stat, valor in bonus_raca.items():
+                stats_finais[stat] = stats_finais.get(stat, 0) + valor
+            
+            # Soma bônus do sobrenome
+            if self.sobrenome_info['key'] != 'none':
+                bonus_sobrenome = self.sobrenome_info['info'].get('bonus', {})
+                for stat, valor in bonus_sobrenome.items():
+                    stats_finais[stat] = stats_finais.get(stat, 0) + valor
+            
+            # Cria o jogador
+            from data.faccao_config import FACCAO_INFO
+            
             novo_jogador = Jogador(
-                usuario_id=novo_usuario.id,
+                usuario_id=usuario.id,
+                nome=interaction.user.name,
                 faccao=self.faccao,
-                nome_personagem=interaction.user.name,
-                vida=stats.get("vida", 0),
-                vida_max=stats.get("vida_max", stats.get("vida", 0)),
-                armadura=stats.get("armadura", 0),
-                velocidade=stats.get("velocidade", 0),
-                berries=50
+                raca=self.raca_info["key"],
+                sobrenome=self.sobrenome_info["key"] if self.sobrenome_info["key"] != 'none' else None,
+                nivel=1,
+                xp=0,
+                berries=stats_finais.get('berries', 1000),
+                vida=stats_finais.get('vida', 10),
+                vida_max=stats_finais.get('vida', 10),
+                energia=stats_finais.get('energia', 10),
+                energia_max=stats_finais.get('energia', 10),
+                armadura=stats_finais.get('armadura', 0),
+                velocidade=stats_finais.get('velocidade', 10),
+                soco=stats_finais.get('soco', 1),
+                espada=stats_finais.get('espada', 0),
+                arma=stats_finais.get('arma', 0),
+                fruta=stats_finais.get('fruta', 0),
+                haki_armamento=stats_finais.get('haki_armamento', 0),
+                haki_observacao=stats_finais.get('haki_observacao', 0),
+                haki_rei=stats_finais.get('haki_rei', 0),
+                vitorias=0,
+                derrotas=0
             )
+            
             db.add(novo_jogador)
             db.commit()
             
-            # =========== CONTAGEM REGRESSIVA ===========
+            # ===== CRIA UM DICIONÁRIO COM OS DADOS DO JOGADOR =====
+            jogador_data = {
+                "vida": novo_jogador.vida,
+                "vida_max": novo_jogador.vida_max,
+                "soco": novo_jogador.soco,
+                "nome": novo_jogador.nome,
+                "berries": novo_jogador.berries,
+                "xp": novo_jogador.xp
+            }
             
-            # Mensagem de sucesso inicial
-            embed = discord.Embed(
-                title=f"{info['emoji']} BEM-VINDO!",
-                description=f"Está preparado para todos os desafios?",
-                color=info['cor']
+            # ===== PERSONAGEM CRIADO COM SUCESSO =====
+            embed_sucesso = discord.Embed(
+                title="✅ **PERSONAGEM CRIADO!**",
+                description=f"### Bem-vindo, {interaction.user.name}!",
+                color=Cores.VERDE_CLARO
             )
-            embed.set_thumbnail(url=interaction.user.display_avatar.url)
-            await interaction.response.edit_message(embed=embed, view=None)
             
-            # Contagem regressiva (3 mensagens)
-            await asyncio.sleep(1.5)
+            embed_sucesso.add_field(
+                name="📋 **SEU PERSONAGEM**",
+                value=(
+                    f"**Raça:** {self.raca_info['info']['nome']}\n"
+                    f"**Sobrenome:** {self.sobrenome_info['info']['nome']}\n"
+                    f"**Facção:** {FACCAO_INFO[self.faccao]['nome']}"
+                ),
+                inline=False
+            )
             
-            for i in range(3, 0, -1):
-                embed = discord.Embed(
-                    description=f"⚔️ **Sua aventura irá começar em {i}...**",
-                    color=Cores.DOURADO
-                )
-                await interaction.edit_original_response(embed=embed)
-                await asyncio.sleep(1)
+            embed_sucesso.set_footer(text="Preparando tutorial...")
             
-            # =========== REDIRECIONA PARA O PERFIL ===========
-            
-            # Cria um contexto falso para chamar o comando perfil
-            ctx = await self.bot.get_context(interaction.message)
-            ctx.author = interaction.user
-            ctx.command = self.bot.get_command("perfil")
-            
-            if ctx.command:
-                await self.bot.get_cog("PerfilCog").perfil(ctx)
-            else:
-                # Fallback: mostra o perfil manualmente
-                await self.mostrar_perfil_direto(interaction, novo_jogador, info)
+            for item in self.children:
+                item.disabled = True
                 
+            await interaction.response.edit_message(embed=embed_sucesso, view=self)
+            
+            # ===== AGUARDA 2 SEGUNDOS E INICIA O TUTORIAL =====
+            await asyncio.sleep(2)
+            
+            # ===== INICIA O TUTORIAL NA MESMA MENSAGEM =====
+            from cogs.tutorial_combate import TutorialCombateCog
+            
+            # Cria cópia do inimigo
+            inimigo = INIMIGO_TUTORIAL.copy()
+            inimigo["vida"] = inimigo["vida_max"]
+            
+            # ===== TELA DE TUTORIAL - INSTRUÇÕES =====
+            embed_tutorial = discord.Embed(
+                title="⚔️ **TUTORIAL DE COMBATE** ⚔️",
+                description=f"Bem-vindo, **{interaction.user.name}**!",
+                color=Cores.DOURADO
+            )
+            
+            # Instruções resumidas
+            instrucoes = (
+                "**⚡ SISTEMA DE ENERGIA**\n"
+                "┗ Acumule **3⚡** para ataques especiais\n\n"
+                
+                "**👊 HABILIDADES**\n"
+                "┗ **SOCO FORTE** ─── Dano +**1⚡**\n"
+                "┗ **PUNHO DE RAIVA** ─── **3x-5x** dano (gasta **3⚡**)\n"
+                "┗ **DESVIO** ─── 50% chance esquivar +**3⚡**\n\n"
+                
+                "**💡 ESTRATÉGIA**\n"
+                "┗ Acumule **3⚡** → Use **PUNHO DE RAIVA**"
+            )
+            
+            embed_tutorial.add_field(
+                name="📚 **COMO JOGAR**",
+                value=instrucoes,
+                inline=False
+            )
+            
+            embed_tutorial.set_footer(text="Clique no botão abaixo para enfrentar o desafio!")
+            
+            # Pega o cog de tutorial
+            tutorial_cog = interaction.client.get_cog('TutorialCombateCog')
+            
+            if not tutorial_cog:
+                # Se não encontrar o cog, cria uma instância básica
+                from cogs.tutorial_combate import TutorialCombateCog
+                tutorial_cog = TutorialCombateCog(interaction.client)
+            
+            # Adiciona o usuário aos tutoriais ativos
+            tutorial_cog.tutoriais_ativos[self.user_id] = True
+            
+            # Importa a classe IniciarTutorialView dentro da função para evitar importação circular
+            from cogs.tutorial_combate import IniciarTutorialView
+            
+            # Botão para começar
+            view_tutorial = IniciarTutorialView(
+                self.user_id, 
+                novo_jogador,  # Passa o objeto jogador
+                inimigo, 
+                interaction.client, 
+                tutorial_cog,
+                jogador_data  # Passa também o dicionário com os dados
+            )
+            
+            # Envia a mensagem do tutorial na MESMA mensagem
+            await interaction.message.edit(embed=embed_tutorial, view=view_tutorial)
+            view_tutorial.mensagem = interaction.message
+            
         except Exception as e:
+            print(f"Erro ao criar personagem: {e}")
             db.rollback()
-            embed = discord.Embed(
-                title="❌ ERRO",
-                description=f"```{str(e)}```",
+            
+            embed_erro = discord.Embed(
+                title="❌ **ERRO**",
+                description=f"Ocorreu um erro: ```{str(e)}```",
                 color=Cores.VERMELHO_FORTE
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+            try:
+                await interaction.followup.send(embed=embed_erro, ephemeral=True)
+            except:
+                pass
         finally:
             db.close()
-
-    async def mostrar_perfil_direto(self, interaction: discord.Interaction, jogador, info):
-        """Mostra o perfil diretamente (fallback)"""
-        embed = discord.Embed(
-            title=f"⚔️ PERFIL DE {interaction.user.name.upper()} ⚔️",
-            color=info['cor']
-        )
-        
-        embed.set_thumbnail(url=interaction.user.display_avatar.url)
-        
-        info_basica = (
-            f"**Facção:** {info['emoji']} {info['nome']}\n"
-            f"**Nível:** {jogador.nivel}\n"
-            f"**Berries:** 💰 {jogador.berries}"
-        )
-        embed.add_field(name="📋 INFORMAÇÕES", value=info_basica, inline=False)
-        
-        status = (
-            f"❤️ **Vida:** {jogador.vida}/{jogador.vida_max}\n"
-            f"🛡️ **Armadura:** {jogador.armadura}\n"
-            f"⚡ **Velocidade:** {jogador.velocidade}"
-        )
-        embed.add_field(name="⚔️ COMBATE", value=status, inline=True)
-        
-        await interaction.followup.send(embed=embed)

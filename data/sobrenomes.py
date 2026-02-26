@@ -3,7 +3,7 @@ import random
 
 SOBRENOMES = {
     # ===== SEM SOBRENOME (sempre disponível como fallback) =====
-    "none": {
+    "None": {
         "nome": "Sem Sobrenome",
         "emoji": "❌",
         "raridade": "comum",
@@ -13,7 +13,7 @@ SOBRENOMES = {
     },
     
     # ===== COMUNS (40%) =====
-    "donquixote": {
+    "Donquixote": {
         "nome": "Donquixote",
         "emoji": "👑",
         "raridade": "comum",
@@ -24,38 +24,25 @@ SOBRENOMES = {
         "historia": "Uma das famílias mais poderosas do mundo. Conhecidos por sua ambição e influência."
     },
     
-    "garp": {
-        "nome": "Garp",
-        "emoji": "⚓",
-        "raridade": "incomum",
-        "descricao": "Família Garp. O herói da marinha.",
-        "bonus": {
-            "soco": 5,
-            "vida": 3,
-            "vida_max": 3
-        },
-        "historia": "A família do herói Monkey D. Garp. Punhos de ferro e coração de marinheiro."
-    },
-    
     # ===== RAROS (15%) =====
     
-    "garp": {
+    "Garp": {
         "nome": "Garp",
         "emoji": "⚓",
         "raridade": "incomum",
         "descricao": "Família Garp. O herói da marinha.",
         "bonus": {
-            "soco": 5,
-            "vida": 3,
-            "vida_max": 3
+            "soco": 3,
+            "vida": 5,
+            "vida_max": 5
         },
         "historia": "A família do herói Monkey D. Garp. Punhos de ferro e coração de marinheiro."
     },
     
     # ===== ÉPICOS (10%) =====
     
-    "gol": {
-        "nome": "Gol",
+    "Gol": {
+        "nome": "Gol D.",
         "emoji": "💰",
         "raridade": "épico",
         "descricao": "Família do Rei dos Piratas.",
@@ -69,7 +56,7 @@ SOBRENOMES = {
     
     # ===== LENDÁRIOS (6%) =====
     "Rocks": {
-        "nome": "Rocks",
+        "nome": "Rocks D.",
         "emoji": "😊",
         "raridade": "lendário",
         "descricao": "Século Vazio.",
@@ -82,8 +69,8 @@ SOBRENOMES = {
     },
     
     # ===== MÍTICOS (4%) =====
-    "d": {
-        "nome": "D. (Vontade de D.)",
+    "D": {
+        "nome": "D.",
         "emoji": "⚡",
         "raridade": "mítico",
         "descricao": "Os portadores da vontade de D. Os inimigos naturais dos deuses.",
