@@ -271,50 +271,105 @@ class RacasView(View):
         )
         await interaction.response.edit_message(embed=embed, view=self)
 
-@discord.ui.button(label="🏠 MENU", style=discord.ButtonStyle.success, row=2)
-async def menu_principal_button(self, interaction: discord.Interaction, button: Button):
-    """Volta para o perfil do jogador (versão atualizada)"""
-    
-    for item in self.children:
-        item.disabled = True
-    await interaction.response.edit_message(view=self)
-    
-    try:
-        # Busca os dados atualizados do jogador
-        from database.connection import SessionLocal
-        from models.usuario import Usuario
-        from models.jogador import Jogador
+    @discord.ui.button(label="🏠 MENU", style=discord.ButtonStyle.success, row=2)
+    async def menu_principal_button(self, interaction: discord.Interaction, button: Button):
+        """Volta para o perfil do jogador (versão atualizada)"""
         
-        db = SessionLocal()
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(view=self)
+        
         try:
-            usuario = db.query(Usuario).filter_by(
-                discord_id=str(interaction.user.id)
-            ).first()
+            # Busca os dados atualizados do jogador
+            from database.connection import SessionLocal
+            from models.usuario import Usuario
+            from models.jogador import Jogador
+            from views.perfil_menu_view import PerfilMenuView
+            from data.faccao_config import FACCAO_INFO
             
-            if usuario:
-                jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
+            db = SessionLocal()
+            try:
+                usuario = db.query(Usuario).filter_by(
+                    discord_id=str(interaction.user.id)
+                ).first()
                 
-                if jogador:
-                    # Cria um contexto falso para executar o comando !perfil
-                    ctx = await self.bot.get_context(interaction.message)
-                    ctx.author = interaction.user
+                if usuario:
+                    jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
                     
-                    # Pega o cog de perfil e chama o comando diretamente
-                    perfil_cog = self.bot.get_cog('PerfilCog')
-                    
-                    if perfil_cog:
-                        # Chama o comando perfil que vai mostrar a versão ATUALIZADA
-                        await perfil_cog.perfil(ctx)
+                    if jogador:
+                        # Cria o embed do perfil atualizado
+                        info_faccao = FACCAO_INFO.get(jogador.faccao, {})
+                        
+                        embed = discord.Embed(
+                            title=f"⚔️ **{interaction.user.name}**",
+                            color=info_faccao.get('cor', Cores.AZUL_FORTE)
+                        )
+                        
+                        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+                        
+                        raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
+                        sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
+                        
+                        # CABEÇALHO
+                        embed.add_field(name="", value=f"⚔️ {interaction.user.name} • 📜 {sobrenome_text}", inline=False)
+                        embed.add_field(name="", value=f"{info_faccao.get('emoji', '')} {info_faccao.get('nome', '???')} • 🧬 {raca_text}", inline=False)
+                        embed.add_field(name="", value="━" * 40, inline=False)
+                        
+                        # VIDA E ENERGIA - USANDO OS MÉTODOS DA PRÓPRIA CLASSE
+                        barra_vida = self.criar_barra_vida(jogador.vida, jogador.vida_max)
+                        barra_energia = self.criar_barra_energia(jogador.energia, jogador.energia_max)
+                        embed.add_field(name="", value=f"❤️ {barra_vida} {jogador.vida}/{jogador.vida_max}  ⚡ {barra_energia} {jogador.energia}/{jogador.energia_max}", inline=False)
+                        embed.add_field(name="", value="━" * 40, inline=False)
+                        
+                        # STATUS E HABILIDADES
+                        embed.add_field(name="", value="⚔️ STATUS", inline=False)
+                        embed.add_field(name="", value=f"🛡️ Armadura: {jogador.armadura}  👊 Soco: {jogador.soco} • ⚔️ Espada: {jogador.espada}", inline=False)
+                        embed.add_field(name="", value=f"🏃 Velocidade: {jogador.velocidade} • 🍎 Fruta: {jogador.fruta} • 🔫 Arma: {jogador.arma}", inline=False)
+                        embed.add_field(name="", value="━" * 40, inline=False)
+                        
+                        # VITÓRIAS E DERROTAS
+                        embed.add_field(name="", value=f"⚔️ Vitórias: {jogador.vitorias}  💔 Derrotas: {jogador.derrotas}", inline=False)
+                        embed.add_field(name="", value="━" * 40, inline=False)
+                        
+                        # PROGRESSÃO
+                        xp_proximo = jogador.nivel * 100
+                        embed.add_field(name="", value=f"💰 B$ {jogador.berries} • NÍVEL {jogador.nivel}", inline=False)
+                        embed.add_field(name="", value=f"{self.criar_barra_xp(jogador.xp, xp_proximo)} {jogador.xp}/{xp_proximo} XP", inline=False)
+                        embed.add_field(name="", value="━" * 40, inline=False)
+                        
+                        # ID e Data
+                        embed.add_field(name="", value=f"ID: {jogador.id} • Update v0.5 • {usuario.data_registro.strftime('%d/%m/%Y')}", inline=False)
+                        
+                        view = PerfilMenuView(interaction.user.id, jogador, self.bot)
+                        
+                        await interaction.edit_original_response(embed=embed, view=view)
                         return
-        finally:
-            db.close()
-        
-        # Se não conseguir, volta para o menu de raças
-        await self.menu_racas(interaction)
+            finally:
+                db.close()
             
-    except Exception as e:
-        print(f"Erro ao voltar para o perfil: {e}")
-        await self.menu_racas(interaction)
+            # Se não conseguir, volta para o menu de raças
+            await self.menu_racas(interaction)
+                
+        except Exception as e:
+            print(f"Erro ao voltar para o perfil: {e}")
+            await self.menu_racas(interaction)
+    
+    # Métodos auxiliares para criar barras
+    def criar_barra_vida(self, valor, maximo, tamanho=5):
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟥" * cheios + "⬜" * (tamanho - cheios)
+    
+    def criar_barra_energia(self, valor, maximo, tamanho=5):
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟧" * cheios + "⬜" * (tamanho - cheios)
+    
+    def criar_barra_xp(self, valor, maximo, tamanho=5):
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟩" * cheios + "⬜" * (tamanho - cheios)
+
 
 class Racas(commands.Cog):
     def __init__(self, bot):

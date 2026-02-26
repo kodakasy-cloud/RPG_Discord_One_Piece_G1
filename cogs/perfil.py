@@ -8,7 +8,7 @@ from ui.cores import Cores
 from views.perfil_menu_view import PerfilMenuView
 from datetime import datetime
 
-class PerfilCog(commands.Cog):
+class PerfilCog(commands.Cog):  # Nome da classe
     def __init__(self, bot):
         self.bot = bot
     
@@ -27,8 +27,10 @@ class PerfilCog(commands.Cog):
         cheios = int((percentual / 100) * tamanho)
         return "🟩" * cheios + "⬜" * (tamanho - cheios)
     
-    @commands.command(name="perfil", aliases=["profile", "status", "stats"])
+    @commands.command(name="perfil", aliases=["profile", "p"])  # Comando principal
     async def perfil(self, ctx, membro: discord.Member = None):
+        """Veja o perfil de um jogador"""
+        
         if membro is None:
             membro = ctx.author
         
@@ -53,7 +55,7 @@ class PerfilCog(commands.Cog):
             info_faccao = FACCAO_INFO.get(jogador.faccao, {})
             
             embed = discord.Embed(
-                title=f"",
+                title=f"⚔️ **{membro.name}**",
                 color=info_faccao.get('cor', Cores.AZUL_FORTE)
             )
             
@@ -67,13 +69,13 @@ class PerfilCog(commands.Cog):
             embed.add_field(name="", value=f"{info_faccao.get('emoji', '')} {info_faccao.get('nome', '???')} • 🧬 {raca_text}", inline=False)
             embed.add_field(name="", value="━" * 40, inline=False)
             
-            # VIDA E ENERGIA (juntos)
+            # VIDA E ENERGIA
             barra_vida = self.criar_barra_vida(jogador.vida, jogador.vida_max)
             barra_energia = self.criar_barra_energia(jogador.energia, jogador.energia_max)
             embed.add_field(name="", value=f"❤️ {barra_vida} {jogador.vida}/{jogador.vida_max}  ⚡ {barra_energia} {jogador.energia}/{jogador.energia_max}", inline=False)
             embed.add_field(name="", value="━" * 40, inline=False)
             
-            # STATUS E HABILIDADES (tudo junto)
+            # STATUS E HABILIDADES
             embed.add_field(name="", value="⚔️ STATUS", inline=False)
             embed.add_field(name="", value=f"🛡️ Armadura: {jogador.armadura}  👊 Soco: {jogador.soco} • ⚔️ Espada: {jogador.espada}", inline=False)
             embed.add_field(name="", value=f"🏃 Velocidade: {jogador.velocidade} • 🍎 Fruta: {jogador.fruta} • 🔫 Arma: {jogador.arma}", inline=False)
@@ -97,11 +99,13 @@ class PerfilCog(commands.Cog):
             
         except Exception as e:
             await ctx.send(f"❌ Erro: ```{str(e)}```")
+            print(f"Erro detalhado no perfil: {e}")
         finally:
             db.close()
     
-    @commands.command(name="rank", aliases=["ranking", "top"])
+    @commands.command(name="rank", aliases=["ranking"])
     async def rank(self, ctx):
+        """Mostra o ranking dos jogadores"""
         db = SessionLocal()
         try:
             top_jogadores = db.query(Jogador).order_by(
