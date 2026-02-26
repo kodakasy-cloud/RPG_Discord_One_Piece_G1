@@ -12,28 +12,23 @@ class PerfilCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    def criar_barra(self, valor, maximo, tamanho=10):
-        """Cria uma barra visual"""
-        percentual = min(100, int((valor / maximo) * 100))
-        cheios = int((percentual / 100) * tamanho)
-        return "🟩" * cheios + "⬜" * (tamanho - cheios)
-    
     def criar_barra_vida(self, valor, maximo, tamanho=5):
-        """Cria uma barra de vida vermelha"""
         percentual = min(100, int((valor / maximo) * 100))
         cheios = int((percentual / 100) * tamanho)
         return "🟥" * cheios + "⬜" * (tamanho - cheios)
     
     def criar_barra_energia(self, valor, maximo, tamanho=5):
-        """Cria uma barra de energia laranja"""
         percentual = min(100, int((valor / maximo) * 100))
         cheios = int((percentual / 100) * tamanho)
         return "🟧" * cheios + "⬜" * (tamanho - cheios)
     
+    def criar_barra_xp(self, valor, maximo, tamanho=5):
+        percentual = min(100, int((valor / maximo) * 100))
+        cheios = int((percentual / 100) * tamanho)
+        return "🟩" * cheios + "⬜" * (tamanho - cheios)
+    
     @commands.command(name="perfil", aliases=["profile", "status", "stats"])
     async def perfil(self, ctx, membro: discord.Member = None):
-        """Veja o perfil de um jogador"""
-        
         if membro is None:
             membro = ctx.author
         
@@ -57,7 +52,6 @@ class PerfilCog(commands.Cog):
             
             info_faccao = FACCAO_INFO.get(jogador.faccao, {})
             
-            # ===== EMBED =====
             embed = discord.Embed(
                 title=f"",
                 color=info_faccao.get('cor', Cores.AZUL_FORTE)
@@ -65,62 +59,35 @@ class PerfilCog(commands.Cog):
             
             embed.set_thumbnail(url=membro.display_avatar.url)
             
-            # ===== BERRIES LOGO ABAIXO DA IMAGEM =====
-            embed.add_field(name="", value=f"💰 {jogador.berries} berries", inline=False)
-            embed.add_field(name="", value="\u200b", inline=False)  # Espaço mínimo
-            
-            # ===== CAMPOS =====
             raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
             sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
             
-            # Linha 1: Nome e Sobrenome
+            # CABEÇALHO
             embed.add_field(name="", value=f"⚔️ {membro.name} • 📜 {sobrenome_text}", inline=False)
-            
-            # Linha 2: Facção e Raça
             embed.add_field(name="", value=f"{info_faccao.get('emoji', '')} {info_faccao.get('nome', '???')} • 🧬 {raca_text}", inline=False)
+            embed.add_field(name="", value="━" * 40, inline=False)
             
-            # Separador
-            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
-            
-            # VIDA
-            embed.add_field(name="", value="❤️ VIDA", inline=False)
+            # VIDA E ENERGIA (juntos)
             barra_vida = self.criar_barra_vida(jogador.vida, jogador.vida_max)
-            embed.add_field(name="", value=f"{barra_vida} {jogador.vida}/{jogador.vida_max}", inline=False)
-            
-            # ENERGIA
-            embed.add_field(name="", value="⚡ ENERGIA", inline=False)
             barra_energia = self.criar_barra_energia(jogador.energia, jogador.energia_max)
-            embed.add_field(name="", value=f"{barra_energia} {jogador.energia}/{jogador.energia_max}", inline=False)
+            embed.add_field(name="", value=f"❤️ {barra_vida} {jogador.vida}/{jogador.vida_max}  ⚡ {barra_energia} {jogador.energia}/{jogador.energia_max}", inline=False)
+            embed.add_field(name="", value="━" * 40, inline=False)
             
-            # Separador
-            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
-            
-            # STATUS
+            # STATUS E HABILIDADES (tudo junto)
             embed.add_field(name="", value="⚔️ STATUS", inline=False)
-            embed.add_field(name="", value=f"🛡️ Armadura: {jogador.armadura} • ⚔️ Vitórias: {jogador.vitorias}", inline=False)
-            embed.add_field(name="", value=f"🏃 Velocidade: {jogador.velocidade} • 💔 Derrotas: {jogador.derrotas}", inline=False)
+            embed.add_field(name="", value=f"🛡️ Armadura: {jogador.armadura}  👊 Soco: {jogador.soco} • ⚔️ Espada: {jogador.espada}", inline=False)
+            embed.add_field(name="", value=f"🏃 Velocidade: {jogador.velocidade} • 🍎 Fruta: {jogador.fruta} • 🔫 Arma: {jogador.arma}", inline=False)
+            embed.add_field(name="", value="━" * 40, inline=False)
             
-            # Separador
-            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
-            
-            # HABILIDADES
-            embed.add_field(name="", value="🥋 HABILIDADES", inline=False)
-            embed.add_field(name="", value=f"👊 Soco: {jogador.soco} • ⚔️ Espada: {jogador.espada}", inline=False)
-            embed.add_field(name="", value=f"🍎 Fruta: {jogador.fruta} • 🔫 Arma: {jogador.arma}", inline=False)
-            
-            # Separador
-            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+            # VITÓRIAS E DERROTAS
+            embed.add_field(name="", value=f"⚔️ Vitórias: {jogador.vitorias}  💔 Derrotas: {jogador.derrotas}", inline=False)
+            embed.add_field(name="", value="━" * 40, inline=False)
             
             # PROGRESSÃO
             xp_proximo = jogador.nivel * 100
-            barra_xp = self.criar_barra(jogador.xp, xp_proximo)
-            embed.add_field(name="", value="📊 PROGRESSÃO", inline=False)
-            embed.add_field(name="", value=f"NÍVEL {jogador.nivel}", inline=False)
-            embed.add_field(name="", value=f"{barra_xp}", inline=False)
-            embed.add_field(name="", value=f"{jogador.xp}/{xp_proximo} XP", inline=False)
-            
-            # Separador
-            embed.add_field(name="", value="━━━━━━━━━━━━━━━━━━━━━━", inline=False)
+            embed.add_field(name="", value=f"💰 B$ {jogador.berries} • NÍVEL {jogador.nivel}", inline=False)
+            embed.add_field(name="", value=f"{self.criar_barra_xp(jogador.xp, xp_proximo)} {jogador.xp}/{xp_proximo} XP", inline=False)
+            embed.add_field(name="", value="━" * 40, inline=False)
             
             # ID e Data
             embed.add_field(name="", value=f"ID: {jogador.id} • Update v0.5 • {usuario.data_registro.strftime('%d/%m/%Y')}", inline=False)

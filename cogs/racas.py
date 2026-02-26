@@ -271,107 +271,50 @@ class RacasView(View):
         )
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="🏠 MENU", style=discord.ButtonStyle.success, row=2)
-    async def menu_principal_button(self, interaction: discord.Interaction, button: Button):
-        """Volta para o perfil do jogador com os botões"""
+@discord.ui.button(label="🏠 MENU", style=discord.ButtonStyle.success, row=2)
+async def menu_principal_button(self, interaction: discord.Interaction, button: Button):
+    """Volta para o perfil do jogador (versão atualizada)"""
+    
+    for item in self.children:
+        item.disabled = True
+    await interaction.response.edit_message(view=self)
+    
+    try:
+        # Busca os dados atualizados do jogador
+        from database.connection import SessionLocal
+        from models.usuario import Usuario
+        from models.jogador import Jogador
         
-        for item in self.children:
-            item.disabled = True
-        await interaction.response.edit_message(view=self)
-        
+        db = SessionLocal()
         try:
-            from database.connection import SessionLocal
-            from models.usuario import Usuario
-            from models.jogador import Jogador
-            from data.faccao_config import FACCAO_INFO
-            from views.perfil_menu_view import PerfilMenuView
-            from ui.cores import Cores
+            usuario = db.query(Usuario).filter_by(
+                discord_id=str(interaction.user.id)
+            ).first()
             
-            db = SessionLocal()
-            try:
-                usuario = db.query(Usuario).filter_by(
-                    discord_id=str(interaction.user.id)
-                ).first()
+            if usuario:
+                jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
                 
-                if usuario:
-                    jogador = db.query(Jogador).filter_by(usuario_id=usuario.id).first()
+                if jogador:
+                    # Cria um contexto falso para executar o comando !perfil
+                    ctx = await self.bot.get_context(interaction.message)
+                    ctx.author = interaction.user
                     
-                    if jogador:
-                        info_faccao = FACCAO_INFO.get(jogador.faccao, {})
-                        
-                        embed = discord.Embed(
-                            title=f"⚔️ **PERFIL DE {interaction.user.name.upper()}** ⚔️",
-                            color=info_faccao.get('cor', Cores.AZUL_FORTE)
-                        )
-                        
-                        embed.set_thumbnail(url=interaction.user.display_avatar.url)
-                        
-                        raca_text = getattr(jogador, 'raca', None) or "Nenhuma"
-                        sobrenome_text = getattr(jogador, 'sobrenome', None) or "Nenhum"
-                        
-                        info_basica = (
-                            f"**Facção:** {info_faccao.get('emoji', '')} {info_faccao.get('nome', 'Desconhecida')}\n"
-                            f"**Nível:** {jogador.nivel}\n"
-                            f"**XP:** {jogador.xp}\n"
-                            f"**Berries:** 💰 {jogador.berries}\n"
-                            f"**Raça:** {raca_text}\n"
-                            f"**Sobrenome:** {sobrenome_text}\n"
-                            f"**Registro:** {usuario.data_registro.strftime('%d/%m/%Y')}"
-                        )
-                        embed.add_field(name="📋 **INFORMAÇÕES**", value=info_basica, inline=False)
-                        
-                        status_combate = (
-                            f"❤️ **Vida:** {jogador.vida}/{jogador.vida_max}\n"
-                            f"🛡️ **Armadura:** {jogador.armadura}\n"
-                            f"⚡ **Velocidade:** {jogador.velocidade}\n"
-                            f"⚔️ **Vitórias:** {jogador.vitorias}\n"
-                            f"💔 **Derrotas:** {jogador.derrotas}"
-                        )
-                        embed.add_field(name="⚔️ **COMBATE**", value=status_combate, inline=True)
-                        
-                        estilos = (
-                            f"👊 **Soco:** {jogador.soco}\n"
-                            f"⚔️ **Espada:** {jogador.espada}\n"
-                            f"🔫 **Arma:** {jogador.arma}\n"
-                            f"🍎 **Fruta:** {jogador.fruta}"
-                        )
-                        embed.add_field(name="🥋 **HABILIDADES**", value=estilos, inline=True)
-                        
-                        hakis = (
-                            f"🛡️ **Armamento:** {jogador.haki_armamento}\n"
-                            f"👁️ **Observação:** {jogador.haki_observacao}\n"
-                            f"👑 **Rei:** {jogador.haki_rei}"
-                        )
-                        embed.add_field(name="🌀 **HAKIS**", value=hakis, inline=True)
-                        
-                        xp_proximo = jogador.nivel * 100
-                        xp_atual = jogador.xp
-                        percentual = min(100, int((xp_atual / xp_proximo) * 100))
-                        barra = "🟩" * (percentual // 10) + "⬜" * (10 - (percentual // 10))
-                        
-                        embed.add_field(
-                            name="📊 **PROGRESSÃO**",
-                            value=f"**Nível {jogador.nivel}**\n{barra} {percentual}%\n`{xp_atual}/{xp_proximo} XP`",
-                            inline=False
-                        )
-                        
-                        embed.set_footer(text=f"ID: {jogador.id} • Use o menu abaixo para navegar")
-                        
-                        # CRIA A VIEW DO PERFIL COM OS BOTÕES
-                        view = PerfilMenuView(interaction.user.id, jogador, self.bot)
-                        
-                        await interaction.edit_original_response(embed=embed, view=view)
+                    # Pega o cog de perfil e chama o comando diretamente
+                    perfil_cog = self.bot.get_cog('PerfilCog')
+                    
+                    if perfil_cog:
+                        # Chama o comando perfil que vai mostrar a versão ATUALIZADA
+                        await perfil_cog.perfil(ctx)
                         return
-                        
-            finally:
-                db.close()
+        finally:
+            db.close()
+        
+        # Se não conseguir, volta para o menu de raças
+        await self.menu_racas(interaction)
             
-            await self.menu_racas(interaction)
-                
-        except Exception as e:
-            print(f"Erro ao voltar para o perfil: {e}")
-            await self.menu_racas(interaction)
-
+    except Exception as e:
+        print(f"Erro ao voltar para o perfil: {e}")
+        await self.menu_racas(interaction)
 
 class Racas(commands.Cog):
     def __init__(self, bot):

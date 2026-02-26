@@ -2,7 +2,7 @@
 BASE_STATS = {
     "vida": 10, 
     "vida_max": 10,
-    "energia": 10,
+    "energia": 0,
     "energia_max":10, 
     "armadura": 5, 
     "velocidade": 10,
@@ -20,7 +20,7 @@ FACCOES = {
     "pirata": {  # PIRATAS - VIDA MÉDIA, VELOCIDADE ALTA
         "vida": 10,
         "vida_max": 10,
-        "energia": 10,
+        "energia": 0,
         "energia_max": 10,
         "armadura": 1,
         "velocidade": 5,
@@ -28,7 +28,7 @@ FACCOES = {
     "marine": {  # MARINHA - VIDA ALTA, ARMADURA ALTA
         "vida": 17,
         "vida_max": 17,
-        "energia": 5,
+        "energia": 0,
         "energia_max": 5,
         "armadura": 4,
         "velocidade": 3,
@@ -36,7 +36,7 @@ FACCOES = {
     "revolucionario": {  # REVOLUCIONÁRIOS - ARMADURA MUITO ALTA
         "vida": 8,
         "vida_max": 8,
-        "energia": 7,
+        "energia": 0,
         "energia_max": 7,
         "armadura": 9,
         "velocidade": 9,
@@ -44,7 +44,7 @@ FACCOES = {
     "cacador": {  # CAÇADORES - EQUILIBRADO
         "vida": 12,
         "vida_max": 12,
-        "energia": 7,
+        "energia": 0,
         "energia_max": 7,
         "armadura": 3,
         "velocidade": 6,

@@ -2,7 +2,7 @@ import discord
 from ui.cores import Cores
 
 class PerfilMenuView(discord.ui.View):
-    """Menu interativo do perfil com várias opções"""
+    """Menu interativo do perfil com navegação entre telas"""
     
     def __init__(self, user_id, jogador, bot):
         super().__init__(timeout=120)
@@ -53,93 +53,126 @@ class PerfilMenuView(discord.ui.View):
                 item.disabled = False
             await interaction.edit_original_response(view=self)
     
-    # ===== LINHA 1 - AÇÕES =====
-    @discord.ui.button(label="🏝️ ILHA", style=discord.ButtonStyle.primary, row=0)
-    async def andar_ilha(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "🏝️ ILHA",
-            "🚧 **Em desenvolvimento!**",
-            Cores.AZUL_FORTE
-        )
-    
-    @discord.ui.button(label="⛵ NAVEGAR", style=discord.ButtonStyle.primary, row=0)
-    async def navegar(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "⛵ NAVEGAR",
-            "🚧 **Em desenvolvimento!**",
-            Cores.AZUL_FORTE
-        )
-    
-    @discord.ui.button(label="🎒 INVENTÁRIO", style=discord.ButtonStyle.primary, row=0)
-    async def inventario(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "🎒 INVENTÁRIO",
-            f"💰 Berries: {self.jogador.berries}\n📦 Nenhum item",
-            Cores.VERDE_CLARO
-        )
-    
-    # ===== LINHA 2 - SOCIAL =====
-    @discord.ui.button(label="🖤 MERCADO", style=discord.ButtonStyle.secondary, row=1)
-    async def black_market(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "🖤 MERCADO NEGRO",
-            "🚧 **Em desenvolvimento!**",
-            Cores.VERMELHO_FORTE
-        )
-    
-    @discord.ui.button(label="🍺 BAR", style=discord.ButtonStyle.secondary, row=1)
-    async def bar(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "🍺 BAR",
-            "🚧 **Em desenvolvimento!**",
-            Cores.LARANJA_FORTE
-        )
-    
-    @discord.ui.button(label="⚔️ HABILIDADES", style=discord.ButtonStyle.secondary, row=1)
-    async def habilidades(self, interaction: discord.Interaction, button: discord.ui.Button):
-        texto = (
-            f"👊 **Soco:** {self.jogador.soco}\n"
-            f"⚔️ **Espada:** {self.jogador.espada}\n"
-            f"🔫 **Arma:** {self.jogador.arma}\n"
-            f"🍎 **Fruta:** {self.jogador.fruta}"
-        )
+    async def menu_principal(self, interaction: discord.Interaction):
+        """Volta para o menu principal"""
+        self.clear_items()
         
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "⚔️ HABILIDADES",
-            texto,
-            Cores.DOURADO,
-            5
+        # LINHA 0
+        self.add_item(IlhaButton(self.user_id, self.jogador, self.bot))
+        self.add_item(NavegarButton(self.user_id, self.jogador, self.bot))
+        self.add_item(InventarioButton(self.user_id, self.jogador, self.bot, self))
+        
+        # LINHA 3 (Config e Sair)
+        self.add_item(ConfigButton(self.user_id, self.jogador, self.bot))
+        self.add_item(SairButton(self.user_id, self.jogador, self.bot))
+        
+        await interaction.response.edit_message(view=self)
+    
+    async def menu_inventario(self, interaction: discord.Interaction):
+        """Abre o menu de inventário"""
+        self.clear_items()
+        
+        # LINHA 0
+        self.add_item(ItensButton(self.user_id, self.jogador, self.bot))
+        self.add_item(HabilidadesButton(self.user_id, self.jogador, self.bot))
+        self.add_item(RacaSobrenomeButton(self.user_id, self.jogador, self.bot, self))
+        
+        # LINHA 3 (Voltar)
+        self.add_item(VoltarButton(self.user_id, self.jogador, self.bot, self))
+        
+        await interaction.response.edit_message(view=self)
+
+
+# ===== BOTÕES DO MENU PRINCIPAL =====
+class IlhaButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="🏝️ ILHA", style=discord.ButtonStyle.primary, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="🏝️ ILHA",
+            description="🚧 **Em desenvolvimento!**",
+            color=Cores.AZUL_FORTE
         )
+        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=3)
+
+
+class NavegarButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="⛵ NAVEGAR", style=discord.ButtonStyle.primary, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
     
-    # ===== LINHA 3 - PERSONALIZAÇÃO =====
-    @discord.ui.button(label="🧬 RAÇA", style=discord.ButtonStyle.success, row=2)
-    async def raca_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Abre o sistema de raças"""
-        await self.abrir_sistema_racas(interaction)
-    
-    @discord.ui.button(label="📜 SOBRENOME", style=discord.ButtonStyle.success, row=2)
-    async def sobrenome_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Abre o sistema de sobrenomes"""
-        await self.abrir_sistema_racas(interaction)
-    
-    @discord.ui.button(label="⚙️ CONFIG", style=discord.ButtonStyle.success, row=2)
-    async def configuracao(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.mostrar_mensagem_temporaria(
-            interaction,
-            "⚙️ CONFIGURAÇÕES",
-            "🚧 **Em desenvolvimento!**",
-            Cores.CINZA_CLARO
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="⛵ NAVEGAR",
+            description="🚧 **Em desenvolvimento!**",
+            color=Cores.AZUL_FORTE
         )
+        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=3)
+
+
+class InventarioButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot, view):
+        super().__init__(label="🎒 INVENTÁRIO", style=discord.ButtonStyle.primary, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+        self.main_view = view
     
-    @discord.ui.button(label="🚪 SAIR", style=discord.ButtonStyle.danger, row=3)
-    async def sair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        for item in self.children:
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        await self.main_view.menu_inventario(interaction)
+
+
+class ConfigButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="⚙️ CONFIG", style=discord.ButtonStyle.success, row=3)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="⚙️ CONFIGURAÇÕES",
+            description="🚧 **Em desenvolvimento!**",
+            color=Cores.CINZA_CLARO
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=3)
+
+
+class SairButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="🚪 SAIR", style=discord.ButtonStyle.danger, row=3)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        for item in self.view.children:
             item.disabled = True
         
         embed = discord.Embed(
@@ -148,7 +181,150 @@ class PerfilMenuView(discord.ui.View):
             color=Cores.VERMELHO_FORTE
         )
         
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+
+# ===== BOTÕES DO MENU DE INVENTÁRIO =====
+class ItensButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="📦 ITENS", style=discord.ButtonStyle.secondary, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="📦 ITENS",
+            description=f"💰 Berries: {self.jogador.berries}\n📦 Nenhum item no inventário.",
+            color=Cores.VERDE_CLARO
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=5)
+
+
+class HabilidadesButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(label="⚔️ HABILIDADES", style=discord.ButtonStyle.secondary, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        texto = (
+            f"👊 **Soco:** {self.jogador.soco}\n"
+            f"⚔️ **Espada:** {self.jogador.espada}\n"
+            f"🔫 **Arma:** {self.jogador.arma}\n"
+            f"🍎 **Fruta:** {self.jogador.fruta}"
+        )
+        
+        embed = discord.Embed(
+            title="⚔️ HABILIDADES",
+            description=texto,
+            color=Cores.DOURADO
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True, delete_after=5)
+
+
+class RacaSobrenomeButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot, view):
+        super().__init__(label="🧬 RAÇA/SOBRENOME", style=discord.ButtonStyle.success, row=0)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+        self.main_view = view
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        # Abre o sistema de raças (substitui a mensagem atual)
+        await self.main_view.abrir_sistema_racas(interaction)
+
+
+class VoltarButton(discord.ui.Button):
+    def __init__(self, user_id, jogador, bot, view):
+        super().__init__(label="🚪 VOLTAR", style=discord.ButtonStyle.secondary, row=3)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+        self.main_view = view
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Não é seu perfil!", ephemeral=True)
+            return
+        
+        await self.main_view.menu_principal(interaction)
+
+
+# View principal (agora mais simples)
+class PerfilMenuView(discord.ui.View):
+    def __init__(self, user_id, jogador, bot):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.jogador = jogador
+        self.bot = bot
+        self.mensagem_original = None
+        
+        # Menu inicial
+        self.add_item(IlhaButton(user_id, jogador, bot))
+        self.add_item(NavegarButton(user_id, jogador, bot))
+        self.add_item(InventarioButton(user_id, jogador, bot, self))
+        self.add_item(ConfigButton(user_id, jogador, bot))
+        self.add_item(SairButton(user_id, jogador, bot))
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
+    
+    async def menu_principal(self, interaction: discord.Interaction):
+        """Volta para o menu principal"""
+        self.clear_items()
+        self.add_item(IlhaButton(self.user_id, self.jogador, self.bot))
+        self.add_item(NavegarButton(self.user_id, self.jogador, self.bot))
+        self.add_item(InventarioButton(self.user_id, self.jogador, self.bot, self))
+        self.add_item(ConfigButton(self.user_id, self.jogador, self.bot))
+        self.add_item(SairButton(self.user_id, self.jogador, self.bot))
+        await interaction.response.edit_message(view=self)
+    
+    async def menu_inventario(self, interaction: discord.Interaction):
+        """Abre o menu de inventário"""
+        self.clear_items()
+        self.add_item(ItensButton(self.user_id, self.jogador, self.bot))
+        self.add_item(HabilidadesButton(self.user_id, self.jogador, self.bot))
+        self.add_item(RacaSobrenomeButton(self.user_id, self.jogador, self.bot, self))
+        self.add_item(VoltarButton(self.user_id, self.jogador, self.bot, self))
+        await interaction.response.edit_message(view=self)
+    
+    async def abrir_sistema_racas(self, interaction: discord.Interaction):
+        """Abre o sistema de raças"""
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(view=self)
+        
+        racas_command = self.bot.get_command('racas')
+        
+        if racas_command:
+            ctx = await self.bot.get_context(interaction.message)
+            ctx.author = interaction.user
+            ctx.command = racas_command
+            
+            racas_cog = self.bot.get_cog('Racas')
+            
+            if racas_cog and hasattr(racas_cog, 'mostrar_menu_racas'):
+                await racas_cog.mostrar_menu_racas(interaction, ctx)
+            else:
+                await self.bot.invoke(ctx)
+        else:
+            await interaction.followup.send("❌ Sistema de raças não encontrado!", ephemeral=True)
+            await self.menu_principal(interaction)
     
     async def on_timeout(self):
         for item in self.children:
